@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
-import { BlueprintMark } from './BlueprintMark';
+import { Logo } from './Logo';
 
 export function Login() {
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
@@ -34,12 +34,12 @@ export function Login() {
 
   return (
     <div className="login-wrap">
-      <div className="login-card bp-rise">
+      <div className="login-card rise">
         <div className="login-brand">
-          <BlueprintMark size={26} />
+          <Logo size={30} />
           <h1 className="word">Home Base</h1>
         </div>
-        <p className="login-sub">// sign in to your inventory</p>
+        <p className="login-sub">Sign in to your inventory</p>
 
         {error && (
           <div className="login-error" role="alert">
@@ -50,7 +50,7 @@ export function Login() {
           <div
             className="login-error"
             role="status"
-            style={{ background: 'var(--bp-trace-dim)', borderColor: 'var(--bp-trace)', color: '#d3fff0' }}
+            style={{ background: 'var(--accent-soft)', borderColor: 'var(--accent)', color: 'var(--accent-hover)' }}
           >
             {info}
           </div>

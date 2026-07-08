@@ -1,15 +1,18 @@
 import { useRef, useState } from 'react';
 import { Modal } from './Modal';
+import { ScanLabelPanel } from './ScanLabelPanel';
 
 interface AddItemModalProps {
   open: boolean;
   onClose: () => void;
-  onSave: (fields: { name: string; model: string; notes: string; photoFile: File | null }) => void;
+  onSave: (fields: { name: string; make: string; model: string; serialNumber: string; notes: string; photoFile: File | null }) => void;
 }
 
 export function AddItemModal({ open, onClose, onSave }: AddItemModalProps) {
   const [name, setName] = useState('');
+  const [make, setMake] = useState('');
   const [model, setModel] = useState('');
+  const [serialNumber, setSerialNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -17,7 +20,9 @@ export function AddItemModal({ open, onClose, onSave }: AddItemModalProps) {
 
   function reset() {
     setName('');
+    setMake('');
     setModel('');
+    setSerialNumber('');
     setNotes('');
     setPhotoFile(null);
     setPhotoPreview(null);
@@ -31,7 +36,7 @@ export function AddItemModal({ open, onClose, onSave }: AddItemModalProps) {
   function handleSave() {
     const trimmed = name.trim();
     if (!trimmed) return;
-    onSave({ name: trimmed, model: model.trim(), notes: notes.trim(), photoFile });
+    onSave({ name: trimmed, make: make.trim(), model: model.trim(), serialNumber: serialNumber.trim(), notes: notes.trim(), photoFile });
     reset();
   }
 
@@ -50,40 +55,48 @@ export function AddItemModal({ open, onClose, onSave }: AddItemModalProps) {
           <label htmlFor="item-name">Name</label>
           <input id="item-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Refrigerator" />
         </div>
-        <div className="field">
-          <label htmlFor="item-model">Brand / model</label>
-          <input id="item-model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="e.g. Samsung RF28R7351SG" />
+
+        <div className="grid-2">
+          <div className="field">
+            <label htmlFor="item-make">Make</label>
+            <input id="item-make" value={make} onChange={(e) => setMake(e.target.value)} placeholder="e.g. Samsung" />
+          </div>
+          <div className="field">
+            <label htmlFor="item-model">Model</label>
+            <input id="item-model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="e.g. RF28R7351SG" />
+          </div>
         </div>
+
         <div className="field">
+          <label htmlFor="item-serial">Serial number</label>
+          <input id="item-serial" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} placeholder="e.g. 0N123ABCD456" />
+        </div>
+
+        <ScanLabelPanel onAssignModel={setModel} onAssignSerial={setSerialNumber} />
+
+        <div className="field" style={{ marginTop: 16 }}>
           <label htmlFor="item-photo-input">Photo</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button type="button" className="btn small" onClick={() => fileInput.current?.click()}>
-              📷 Take / choose photo
+              📷 Add photo
             </button>
-            <span className="bp-label" style={{ fontSize: 12 }}>
-              {photoFile ? 'Photo captured ✓' : 'No photo yet'}
+            <span className="field-hint" style={{ margin: 0 }}>
+              {photoFile ? 'Photo added ✓' : 'Camera or photo library'}
             </span>
           </div>
-          <input
-            id="item-photo-input"
-            ref={fileInput}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            style={{ display: 'none' }}
-            onChange={handlePhotoChange}
-          />
+          <input id="item-photo-input" ref={fileInput} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
           {photoPreview && (
-            <img src={photoPreview} alt="" style={{ maxWidth: 140, marginTop: 10, borderRadius: 3, border: '1px solid var(--bp-line)' }} />
+            <img src={photoPreview} alt="" style={{ maxWidth: 140, marginTop: 10, borderRadius: 8, border: '1px solid var(--border)' }} />
           )}
         </div>
+
         <div className="field">
           <label htmlFor="item-notes">Notes</label>
           <textarea
             id="item-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Anything worth remembering — purchase date, serial number, quirks…"
+            placeholder="Anything worth remembering — purchase date, warranty, quirks…"
           />
         </div>
         <div className="form-actions">

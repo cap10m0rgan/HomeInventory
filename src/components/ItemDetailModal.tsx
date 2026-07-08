@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Modal } from './Modal';
-import type { Item, Part, PartType, Space } from '../types';
+import type { Item, Part, PartType, Photo, Space } from '../types';
 import { MANUALS_BUCKET, PHOTOS_BUCKET, publicUrlFor } from '../lib/supabase';
 
 const PART_TYPES: PartType[] = ['Filter', 'Replacement part', 'Battery', 'Consumable', 'Accessory', 'Other'];
@@ -9,7 +9,9 @@ interface ItemDetailModalProps {
   item: Item | null;
   space: Space | null;
   onClose: () => void;
-  onUploadPhoto: (itemId: string, file: File) => void;
+  onAddPhoto: (itemId: string, file: File, makePrimary: boolean) => void;
+  onDeletePhoto: (photoId: string, storagePath: string) => void;
+  onSetPrimaryPhoto: (itemId: string, photoId: string) => void;
   onAttachManual: (itemId: string, file: File) => void;
   onAddPart: (itemId: string, part: { type: PartType; name: string; link: string; notes: string }) => void;
   onDeletePart: (partId: string) => void;
@@ -20,7 +22,9 @@ export function ItemDetailModal({
   item,
   space,
   onClose,
-  onUploadPhoto,
+  onAddPhoto,
+  onDeletePhoto,
+  onSetPrimaryPhoto,
   onAttachManual,
   onAddPart,
   onDeletePart,
@@ -31,18 +35,21 @@ export function ItemDetailModal({
   const [partName, setPartName] = useState('');
   const [partLink, setPartLink] = useState('');
   const [partNotes, setPartNotes] = useState('');
+  const [activePhotoIdx, setActivePhotoIdx] = useState(0);
 
-  const photoInput = useRef<HTMLInputElement>(null);
+  const addPhotoInput = useRef<HTMLInputElement>(null);
   const manualInput = useRef<HTMLInputElement>(null);
 
   // Retain the last non-null item/space so the modal's content doesn't blank
-  // out mid-close while Modal's exit animation is still playing (item/space
-  // go null the instant the caller clears the "active item" selection, well
-  // before the animation finishes).
+  // out mid-close while Modal's exit animation is still playing.
   const [display, setDisplay] = useState<{ item: Item; space: Space } | null>(null);
   useEffect(() => {
     if (item && space) setDisplay({ item, space });
   }, [item, space]);
+
+  useEffect(() => {
+    setActivePhotoIdx(0);
+  }, [display?.item.id]);
 
   function resetPartForm() {
     setPartFormOpen(false);
@@ -64,52 +71,94 @@ export function ItemDetailModal({
   }
 
   const { item: d, space: s } = display;
-  const photoUrl = publicUrlFor(PHOTOS_BUCKET, d.photo_path);
+  const sortedPhotos: Photo[] = [...d.photos].sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0) || a.sort_order - b.sort_order);
+  const activePhoto = sortedPhotos[Math.min(activePhotoIdx, sortedPhotos.length - 1)] ?? null;
   const manualUrl = publicUrlFor(MANUALS_BUCKET, d.manual_path);
+  const manualSearchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(`${d.make} ${d.model || d.name} manual pdf`.trim())}`;
 
   return (
     <Modal open={!!item} onClose={onClose} title={d.name} width="wide">
-      <div className="title-block">
-        {d.manual_path && <span className="tb-stamp">On file</span>}
-        <div className="tb-name">{d.name}</div>
-        <div className="tb-row">
-          <div className="tb-field">
-            <span className="k">Model</span>
-            {d.model || '—'}
-          </div>
-          <div className="tb-field">
-            <span className="k">Space</span>
-            {s.name}
-          </div>
-          <div className="tb-field">
-            <span className="k">Parts on file</span>
-            {d.parts.length}
-          </div>
+      <div className="gallery">
+        <div className="gallery-main">
+          {activePhoto ? (
+            <img src={publicUrlFor(PHOTOS_BUCKET, activePhoto.storage_path) ?? undefined} alt={`${d.name} photo ${activePhotoIdx + 1}`} />
+          ) : (
+            'No photos yet'
+          )}
         </div>
-      </div>
-
-      {photoUrl && (
-        <div className="detail-section">
-          <img src={photoUrl} alt={d.name} style={{ maxWidth: '100%', borderRadius: 3, border: '1px solid var(--bp-line)' }} />
+        <div className="gallery-strip">
+          {sortedPhotos.map((p, i) => (
+            <div key={p.id} className={`photo-thumb${i === activePhotoIdx ? ' active' : ''}`}>
+              <button
+                type="button"
+                className="photo-thumb-select"
+                onClick={() => setActivePhotoIdx(i)}
+                aria-label={`Show photo ${i + 1}${p.is_primary ? ' (cover photo)' : ''}`}
+                aria-current={i === activePhotoIdx ? 'true' : undefined}
+              >
+                <img src={publicUrlFor(PHOTOS_BUCKET, p.storage_path) ?? undefined} alt="" />
+                {p.is_primary && <span className="cover-badge">Cover</span>}
+              </button>
+              <button
+                type="button"
+                className="gallery-remove"
+                aria-label={`Remove photo ${i + 1}`}
+                onClick={() => onDeletePhoto(p.id, p.storage_path)}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="add-photo-tile"
+            onClick={() => addPhotoInput.current?.click()}
+            aria-label="Add photo"
+          >
+            +
+          </button>
         </div>
-      )}
-      <div className="detail-section" style={{ paddingTop: 0 }}>
-        <button type="button" className="btn small" onClick={() => photoInput.current?.click()}>
-          📷 Take / replace photo
-        </button>
         <input
-          ref={photoInput}
+          ref={addPhotoInput}
           type="file"
           accept="image/*"
-          capture="environment"
-          aria-label="Item photo"
+          aria-label="Add item photo"
           style={{ display: 'none' }}
           onChange={(e) => {
             const file = e.target.files?.[0];
-            if (file) onUploadPhoto(d.id, file);
+            if (file) onAddPhoto(d.id, file, sortedPhotos.length === 0);
             e.target.value = '';
           }}
         />
+        {activePhoto && !activePhoto.is_primary && (
+          <div className="gallery-actions">
+            <button type="button" className="btn small" onClick={() => onSetPrimaryPhoto(d.id, activePhoto.id)}>
+              ⭐ Set as cover photo
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="info-panel">
+        <h1>{d.name}</h1>
+        <div className="info-grid">
+          <div className="info-field">
+            <span className="k">Make</span>
+            <span className="v">{d.make || '—'}</span>
+          </div>
+          <div className="info-field">
+            <span className="k">Model</span>
+            <span className="v">{d.model || '—'}</span>
+          </div>
+          <div className="info-field">
+            <span className="k">Serial number</span>
+            <span className="v">{d.serial_number || '—'}</span>
+          </div>
+          <div className="info-field">
+            <span className="k">Room</span>
+            <span className="v">{s.name}</span>
+          </div>
+        </div>
       </div>
 
       <div className="detail-section">
@@ -123,16 +172,9 @@ export function ItemDetailModal({
           📄 {manualUrl ? `Show manual${d.manual_filename ? ' — ' + d.manual_filename : ''}` : 'Show manual'}
         </button>
         <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn small"
-            onClick={() => {
-              const q = encodeURIComponent(`${d.model || d.name} manual filetype:pdf`);
-              window.open(`https://www.google.com/search?q=${q}`, '_blank', 'noopener');
-            }}
-          >
+          <a className="btn small" href={manualSearchUrl} target="_blank" rel="noopener noreferrer">
             🔍 Find manual online
-          </button>
+          </a>
           <button type="button" className="btn small" onClick={() => manualInput.current?.click()}>
             📎 Attach manual (PDF)
           </button>
@@ -193,7 +235,7 @@ export function ItemDetailModal({
                       <span className="empty-note">—</span>
                     )}
                   </td>
-                  <td style={{ color: 'var(--bp-ink-faint)', fontSize: 12 }}>{p.notes}</td>
+                  <td style={{ color: 'var(--ink-faint)', fontSize: 12.5 }}>{p.notes}</td>
                   <td>
                     <button type="button" className="row-del" aria-label={`Delete ${p.name}`} onClick={() => onDeletePart(p.id)}>
                       ✕
