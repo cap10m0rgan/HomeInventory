@@ -133,8 +133,11 @@
 .room-chip .count {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: inherit;
-  opacity: 0.7;
+  /* solid colors, not opacity — opacity:0.7 measured ~3.6:1 here, under AA */
+  color: var(--ink-faint);
+}
+.room-chip.active .count {
+  color: var(--accent-hover);
 }
 .room-chip.add-chip,
 .room-chip.manage-chip {
