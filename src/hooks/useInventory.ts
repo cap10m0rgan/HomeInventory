@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { MANUALS_BUCKET, PHOTOS_BUCKET, supabase } from '../lib/supabase';
 import { compressImage } from '../lib/image';
 import { useToasts } from './useToasts';
-import type { Part, PartType, Space } from '../types';
+import type { Part, PartType, Photo, Space } from '../types';
 
 export function useInventory(userId: string | undefined) {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -11,14 +11,19 @@ export function useInventory(userId: string | undefined) {
 
   const refresh = useCallback(async () => {
     if (!userId) return;
-    const [{ data: spacesData, error: spacesErr }, { data: itemsData, error: itemsErr }, { data: partsData, error: partsErr }] =
-      await Promise.all([
-        supabase.from('spaces').select('*').order('sort_order').order('created_at'),
-        supabase.from('items').select('*').order('created_at'),
-        supabase.from('parts').select('*').order('created_at'),
-      ]);
+    const [
+      { data: spacesData, error: spacesErr },
+      { data: itemsData, error: itemsErr },
+      { data: partsData, error: partsErr },
+      { data: photosData, error: photosErr },
+    ] = await Promise.all([
+      supabase.from('spaces').select('*').order('sort_order').order('created_at'),
+      supabase.from('items').select('*').order('created_at'),
+      supabase.from('parts').select('*').order('created_at'),
+      supabase.from('item_photos').select('*').order('sort_order').order('created_at'),
+    ]);
 
-    const err = spacesErr || itemsErr || partsErr;
+    const err = spacesErr || itemsErr || partsErr || photosErr;
     if (err) {
       showToast('error', "Couldn't load your inventory", err.message);
       setLoading(false);
@@ -32,10 +37,17 @@ export function useInventory(userId: string | undefined) {
       partsByItem.set(p.item_id, list);
     });
 
+    const photosByItem = new Map<string, Photo[]>();
+    (photosData ?? []).forEach((ph) => {
+      const list = photosByItem.get(ph.item_id) ?? [];
+      list.push(ph as Photo);
+      photosByItem.set(ph.item_id, list);
+    });
+
     const itemsBySpace = new Map<string, Space['items']>();
     (itemsData ?? []).forEach((it) => {
       const list = itemsBySpace.get(it.space_id) ?? [];
-      list.push({ ...it, parts: partsByItem.get(it.id) ?? [] });
+      list.push({ ...it, parts: partsByItem.get(it.id) ?? [], photos: photosByItem.get(it.id) ?? [] });
       itemsBySpace.set(it.space_id, list);
     });
 
@@ -76,22 +88,44 @@ export function useInventory(userId: string | undefined) {
 
   async function createItem(
     spaceId: string,
-    fields: { name: string; model: string; notes: string; photoFile: File | null },
+    fields: { name: string; make: string; model: string; serialNumber: string; notes: string; photoFile: File | null },
   ) {
     if (!userId) return;
     await guarded(async () => {
       const { data: inserted, error } = await supabase
         .from('items')
-        .insert({ space_id: spaceId, user_id: userId, name: fields.name, model: fields.model, notes: fields.notes })
+        .insert({
+          space_id: spaceId,
+          user_id: userId,
+          name: fields.name,
+          make: fields.make,
+          model: fields.model,
+          serial_number: fields.serialNumber,
+          notes: fields.notes,
+        })
         .select()
         .single();
       if (error) throw error;
 
       if (fields.photoFile) {
-        await uploadPhotoInternal(inserted.id, fields.photoFile);
+        await addPhotoInternal(inserted.id, fields.photoFile, true);
       }
       await refresh();
     }, "Couldn't add item");
+  }
+
+  async function updateItem(
+    itemId: string,
+    fields: { name: string; make: string; model: string; serialNumber: string; notes: string },
+  ) {
+    await guarded(async () => {
+      const { error } = await supabase
+        .from('items')
+        .update({ name: fields.name, make: fields.make, model: fields.model, serial_number: fields.serialNumber, notes: fields.notes })
+        .eq('id', itemId);
+      if (error) throw error;
+      await refresh();
+    }, "Couldn't update item");
   }
 
   async function deleteItem(id: string) {
@@ -102,20 +136,47 @@ export function useInventory(userId: string | undefined) {
     }, "Couldn't delete item");
   }
 
-  async function uploadPhotoInternal(itemId: string, file: File) {
-    const blob = await compressImage(file, 1000, 0.82);
+  async function addPhotoInternal(itemId: string, file: File, makePrimary: boolean) {
+    const blob = await compressImage(file, 1400, 0.85);
     const path = `${userId}/${itemId}/${crypto.randomUUID()}.jpg`;
     const { error: uploadErr } = await supabase.storage.from(PHOTOS_BUCKET).upload(path, blob, { contentType: 'image/jpeg' });
     if (uploadErr) throw uploadErr;
-    const { error: updateErr } = await supabase.from('items').update({ photo_path: path }).eq('id', itemId);
-    if (updateErr) throw updateErr;
+
+    if (makePrimary) {
+      // Only one row may have is_primary=true (enforced by a partial unique
+      // index) — clear the existing primary first so the insert doesn't 409.
+      await supabase.from('item_photos').update({ is_primary: false }).eq('item_id', itemId).eq('is_primary', true);
+    }
+    const { error: insertErr } = await supabase
+      .from('item_photos')
+      .insert({ item_id: itemId, user_id: userId, storage_path: path, is_primary: makePrimary });
+    if (insertErr) throw insertErr;
   }
 
-  async function updateItemPhoto(itemId: string, file: File) {
+  async function addPhoto(itemId: string, file: File, makePrimary: boolean) {
     await guarded(async () => {
-      await uploadPhotoInternal(itemId, file);
+      await addPhotoInternal(itemId, file, makePrimary);
       await refresh();
-    }, "Couldn't save photo");
+    }, "Couldn't add photo");
+  }
+
+  async function deletePhoto(photoId: string, storagePath: string) {
+    await guarded(async () => {
+      const { error: dbErr } = await supabase.from('item_photos').delete().eq('id', photoId);
+      if (dbErr) throw dbErr;
+      // Best-effort: reclaim storage. Not fatal if this fails (e.g. already gone).
+      await supabase.storage.from(PHOTOS_BUCKET).remove([storagePath]);
+      await refresh();
+    }, "Couldn't delete photo");
+  }
+
+  async function setPrimaryPhoto(itemId: string, photoId: string) {
+    await guarded(async () => {
+      await supabase.from('item_photos').update({ is_primary: false }).eq('item_id', itemId).eq('is_primary', true);
+      const { error } = await supabase.from('item_photos').update({ is_primary: true }).eq('id', photoId);
+      if (error) throw error;
+      await refresh();
+    }, "Couldn't set cover photo");
   }
 
   async function attachManual(itemId: string, file: File) {
@@ -156,8 +217,11 @@ export function useInventory(userId: string | undefined) {
     createSpace,
     deleteSpace,
     createItem,
+    updateItem,
     deleteItem,
-    updateItemPhoto,
+    addPhoto,
+    deletePhoto,
+    setPrimaryPhoto,
     attachManual,
     addPart,
     deletePart,

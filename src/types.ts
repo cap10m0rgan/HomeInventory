@@ -10,17 +10,28 @@ export interface Part {
   created_at: string;
 }
 
+export interface Photo {
+  id: string;
+  item_id: string;
+  storage_path: string;
+  is_primary: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface Item {
   id: string;
   space_id: string;
   name: string;
+  make: string;
   model: string;
+  serial_number: string;
   notes: string;
-  photo_path: string | null;
   manual_path: string | null;
   manual_filename: string | null;
   created_at: string;
   parts: Part[];
+  photos: Photo[];
 }
 
 export interface Space {

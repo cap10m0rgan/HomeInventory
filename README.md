@@ -43,6 +43,14 @@ This app has no admin invite system — it's meant for one household.
    from the Actions tab). The site will be live at
    `https://<your-username>.github.io/HomeInventory/`.
 
+### Upgrading an existing project (already ran `schema.sql` once)
+
+If you set this up before multi-photo support and Make/Serial Number fields
+existed, run [`supabase/migrations/0002_photos_and_fields.sql`](./supabase/migrations/0002_photos_and_fields.sql)
+in the SQL editor. It adds the new `item_photos` table and `items.make` /
+`items.serial_number` columns, migrates any existing single photo per item
+into the new table as its cover photo, and is safe to re-run.
+
 ## Local development
 
 ```bash
@@ -53,11 +61,23 @@ npm run dev
 
 ## Data model & privacy notes
 
-- Every row in `spaces` / `items` / `parts` is scoped to `auth.uid()` via
-  row-level security — only your signed-in account can read or write them.
+- Every row in `spaces` / `items` / `item_photos` / `parts` is scoped to
+  `auth.uid()` via row-level security — only your signed-in account can read
+  or write them.
 - Photo and manual storage buckets are **public-read** (so `<img>` tags and
   manual links work without signed-URL refresh logic), but object paths are
   random UUIDs and the buckets aren't browsable — effectively unlisted rather
   than indexed. Uploads/deletes are still restricted to the owning account.
   If you want stricter privacy later, switch the buckets to private and
   generate signed URLs on read.
+
+## Notes on the OCR "Scan model/serial label" feature
+
+Text recognition runs entirely client-side via
+[Tesseract.js](https://github.com/naptha/tesseract.js) (lazy-loaded only when
+you tap the scan button, so it doesn't add to the initial page weight).
+Recognized text lines are shown as candidates you tap to fill into Model or
+Serial Number — nothing is auto-filled silently, since OCR on small,
+reflective, or angled rating plates is inherently unreliable. For best
+results: fill the frame with the plate, use even lighting, and hold the
+camera as parallel to the label as possible.

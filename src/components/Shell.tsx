@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useInventory } from '../hooks/useInventory';
 import { useToasts } from '../hooks/useToasts';
-import { Sidebar } from './Sidebar';
 import { ItemGrid } from './ItemGrid';
 import { AddSpaceModal } from './AddSpaceModal';
 import { AddItemModal } from './AddItemModal';
+import { ManageSpacesModal } from './ManageSpacesModal';
 import { ItemDetailModal } from './ItemDetailModal';
+import { Logo } from './Logo';
 import type { Item, Space } from '../types';
 
 export function Shell({ userId, onSignOut }: { userId: string; onSignOut: () => void }) {
@@ -18,6 +19,7 @@ export function Shell({ userId, onSignOut }: { userId: string; onSignOut: () => 
   const [searchTerm, setSearchTerm] = useState('');
   const [addSpaceOpen, setAddSpaceOpen] = useState(false);
   const [addItemOpen, setAddItemOpen] = useState(false);
+  const [manageSpacesOpen, setManageSpacesOpen] = useState(false);
 
   useEffect(() => {
     if (!activeSpaceId && inventory.spaces.length > 0) {
@@ -33,7 +35,8 @@ export function Shell({ userId, onSignOut }: { userId: string; onSignOut: () => 
     const results: { item: Item; space: Space }[] = [];
     inventory.spaces.forEach((sp) => {
       sp.items.forEach((it) => {
-        const itemHit = it.name.toLowerCase().includes(q) || it.model.toLowerCase().includes(q);
+        const itemHit =
+          it.name.toLowerCase().includes(q) || it.model.toLowerCase().includes(q) || it.make.toLowerCase().includes(q);
         const partHit = it.parts.some((p) => p.name.toLowerCase().includes(q) || p.type.toLowerCase().includes(q));
         if (itemHit || partHit) results.push({ item: it, space: sp });
       });
@@ -68,98 +71,126 @@ export function Shell({ userId, onSignOut }: { userId: string; onSignOut: () => 
     closeItem();
   }
 
-  const gridItems: { item: Item; space: Space }[] | null = searchResults ?? (activeSpace ? activeSpace.items.map((item) => ({ item, space: activeSpace })) : null);
+  const gridItems: { item: Item; space: Space }[] | null =
+    searchResults ?? (activeSpace ? activeSpace.items.map((item) => ({ item, space: activeSpace })) : null);
 
   return (
     <div className="app-shell">
-      <Sidebar
-        spaces={inventory.spaces}
-        activeSpaceId={activeSpaceId}
-        onSelectSpace={(id) => {
-          setActiveSpaceId(id);
-          setSearchTerm('');
-        }}
-        onAddSpace={() => setAddSpaceOpen(true)}
-        onDeleteSpace={handleDeleteSpace}
-        onSignOut={onSignOut}
-      />
-
-      <main className="main" id="main-content">
-        <div className="topbar">
+      <header className="topbar">
+        <div className="topbar-brand">
+          <Logo size={28} />
+          <p className="word">Home Base</p>
+        </div>
+        <div className="topbar-search">
           <label htmlFor="inventory-search" className="visually-hidden">
             Search items and parts
           </label>
           <input
             id="inventory-search"
-            className="search"
             placeholder="Search items and parts…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        <span className="topbar-spacer" />
+        <button type="button" className="btn ghost small topbar-signout" onClick={onSignOut}>
+          Sign out
+        </button>
+      </header>
 
-        {!searchTerm.trim() && (
-          <div className="room-chips" role="group" aria-label="Spaces">
-            {inventory.spaces.map((sp) => (
-              <button
-                key={sp.id}
-                type="button"
-                className={`room-chip${sp.id === activeSpaceId ? ' active' : ''}`}
-                aria-current={sp.id === activeSpaceId ? 'true' : undefined}
-                onClick={() => setActiveSpaceId(sp.id)}
-              >
-                {sp.name}
-              </button>
-            ))}
-            <button type="button" className="room-chip add-chip" onClick={() => setAddSpaceOpen(true)}>
-              + Space
+      {!searchTerm.trim() && (
+        <nav className="rooms-row" aria-label="Rooms">
+          {inventory.spaces.map((sp) => (
+            <button
+              key={sp.id}
+              type="button"
+              className={`room-chip${sp.id === activeSpaceId ? ' active' : ''}`}
+              aria-current={sp.id === activeSpaceId ? 'true' : undefined}
+              onClick={() => setActiveSpaceId(sp.id)}
+            >
+              {sp.name}
+              <span className="count">{sp.items.length}</span>
             </button>
-          </div>
-        )}
+          ))}
+          <button type="button" className="room-chip add-chip" onClick={() => setAddSpaceOpen(true)}>
+            + Room
+          </button>
+          {inventory.spaces.length > 0 && (
+            <button type="button" className="room-chip manage-chip" onClick={() => setManageSpacesOpen(true)}>
+              Manage
+            </button>
+          )}
+        </nav>
+      )}
 
+      <main className="main" id="main-content">
         {searchTerm.trim() ? (
           <>
             <div className="room-heading">
-              <h1 className="bp-display">Search results</h1>
-              <span className="item-count" role="status" aria-live="polite">
-                {searchResults?.length ?? 0} match{searchResults?.length === 1 ? '' : 'es'}
-              </span>
+              <div className="room-heading-text">
+                <h1 className="display">Search results</h1>
+                <span className="item-count" role="status" aria-live="polite">
+                  {searchResults?.length ?? 0} match{searchResults?.length === 1 ? '' : 'es'}
+                </span>
+              </div>
             </div>
             {searchResults?.length === 0 && <p className="room-empty-hint">Nothing matches yet. Try a different term.</p>}
             <ItemGrid items={gridItems ?? []} onOpenItem={openItem} />
           </>
         ) : inventory.spaces.length === 0 ? (
-          <div className="empty-state" style={{ marginTop: 40 }}>
+          <div className="empty-state">
             <div className="big">Nothing here yet</div>
-            Click <strong>+ Space</strong> above to add your first space (Kitchen, Garage, Office…).
+            Click <strong>+ Room</strong> above to add your first room (Kitchen, Garage, Office…).
           </div>
         ) : activeSpace ? (
           <>
             <div className="room-heading">
-              <h1 className="bp-display">{activeSpace.name}</h1>
-              <span className="item-count">
-                {activeSpace.items.length} item{activeSpace.items.length === 1 ? '' : 's'}
-              </span>
+              <div className="room-heading-text">
+                <h1 className="display">{activeSpace.name}</h1>
+                <span className="item-count">
+                  {activeSpace.items.length} item{activeSpace.items.length === 1 ? '' : 's'}
+                </span>
+              </div>
+              <button type="button" className="btn primary" onClick={() => setAddItemOpen(true)}>
+                + Add item
+              </button>
             </div>
-            {activeSpace.items.length === 0 && <p className="room-empty-hint">No items yet — add the first one below.</p>}
-            <ItemGrid items={gridItems ?? []} onOpenItem={openItem} onAddItem={() => setAddItemOpen(true)} />
+            {activeSpace.items.length === 0 ? (
+              <div className="empty-state">
+                <div className="big">No items yet</div>
+                Click <strong>+ Add item</strong> above to log the first thing in this room.
+              </div>
+            ) : (
+              <ItemGrid items={gridItems ?? []} onOpenItem={openItem} />
+            )}
           </>
         ) : (
-          <p className="room-empty-hint">Open the menu and select or add a space.</p>
+          <p className="room-empty-hint">Select or add a room above.</p>
         )}
       </main>
 
-      <AddSpaceModal open={addSpaceOpen} onClose={() => setAddSpaceOpen(false)} onSave={(name) => {
-        inventory.createSpace(name);
-        setAddSpaceOpen(false);
-      }} />
+      <AddSpaceModal
+        open={addSpaceOpen}
+        onClose={() => setAddSpaceOpen(false)}
+        onSave={(name) => {
+          inventory.createSpace(name);
+          setAddSpaceOpen(false);
+        }}
+      />
+
+      <ManageSpacesModal
+        open={manageSpacesOpen}
+        onClose={() => setManageSpacesOpen(false)}
+        spaces={inventory.spaces}
+        onDeleteSpace={handleDeleteSpace}
+      />
 
       <AddItemModal
         open={addItemOpen}
         onClose={() => setAddItemOpen(false)}
         onSave={(fields) => {
           if (!activeSpaceId) {
-            showToast('warning', 'Select or create a space first');
+            showToast('warning', 'Select or create a room first');
             return;
           }
           inventory.createItem(activeSpaceId, fields);
@@ -171,7 +202,9 @@ export function Shell({ userId, onSignOut }: { userId: string; onSignOut: () => 
         item={activeItem}
         space={activeItemSpace}
         onClose={closeItem}
-        onUploadPhoto={inventory.updateItemPhoto}
+        onAddPhoto={inventory.addPhoto}
+        onDeletePhoto={inventory.deletePhoto}
+        onSetPrimaryPhoto={inventory.setPrimaryPhoto}
         onAttachManual={inventory.attachManual}
         onAddPart={inventory.addPart}
         onDeletePart={inventory.deletePart}
