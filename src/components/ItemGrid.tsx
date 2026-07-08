@@ -12,7 +12,8 @@ export function ItemGrid({ items, onOpenItem, onAddItem }: ItemGridProps) {
   return (
     <div className="item-grid">
       {items.map(({ item }, i) => (
-        <motion.div
+        <motion.button
+          type="button"
           key={item.id}
           className="item-card"
           initial={{ opacity: 0, y: 10 }}
@@ -22,7 +23,7 @@ export function ItemGrid({ items, onOpenItem, onAddItem }: ItemGridProps) {
         >
           <div className="thumb">
             {item.photo_path ? (
-              <img src={publicUrlFor(PHOTOS_BUCKET, item.photo_path) ?? undefined} alt={item.name} />
+              <img src={publicUrlFor(PHOTOS_BUCKET, item.photo_path) ?? undefined} alt="" />
             ) : (
               'No image'
             )}
@@ -36,12 +37,12 @@ export function ItemGrid({ items, onOpenItem, onAddItem }: ItemGridProps) {
               </span>
             </div>
           </div>
-        </motion.div>
+        </motion.button>
       ))}
       {onAddItem && (
-        <div className="add-item-card" onClick={onAddItem}>
+        <button type="button" className="add-item-card" onClick={onAddItem}>
           + Add item
-        </div>
+        </button>
       )}
     </div>
   );

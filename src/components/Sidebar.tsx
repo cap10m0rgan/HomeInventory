@@ -20,9 +20,9 @@ export function Sidebar({ spaces, activeSpaceId, onSelectSpace, onAddSpace, onDe
 
   return (
     <>
-      <div className={`sidebar${expanded ? ' expanded' : ''}`}>
-        <button className="sidebar-toggle" aria-label="Toggle spaces menu" onClick={() => setExpanded((v) => !v)}>
-          <span className="chevron" style={{ transform: expanded ? 'rotate(180deg)' : 'none' }}>
+      <nav className={`sidebar${expanded ? ' expanded' : ''}`} aria-label="Spaces">
+        <button className="sidebar-toggle" aria-label={expanded ? 'Collapse spaces menu' : 'Expand spaces menu'} aria-expanded={expanded} onClick={() => setExpanded((v) => !v)}>
+          <span className="chevron" aria-hidden="true" style={{ transform: expanded ? 'rotate(180deg)' : 'none' }}>
             &#8250;
           </span>
         </button>
@@ -34,42 +34,47 @@ export function Sidebar({ spaces, activeSpaceId, onSelectSpace, onAddSpace, onDe
 
         <ul className="sidebar-nav">
           {spaces.map((sp) => (
-            <li
-              key={sp.id}
-              className={`nav-item${sp.id === activeSpaceId ? ' active' : ''}`}
-              onClick={() => {
-                onSelectSpace(sp.id);
-                setExpanded(false);
-              }}
-            >
-              <span className="avatar">{initials(sp.name)}</span>
-              <span className="label">{sp.name}</span>
-              <span className="count">{sp.items.length}</span>
-              <span
-                className="del"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteSpace(sp.id, sp.name);
+            <li key={sp.id} className="nav-row">
+              <button
+                type="button"
+                className={`nav-item${sp.id === activeSpaceId ? ' active' : ''}`}
+                aria-current={sp.id === activeSpaceId ? 'true' : undefined}
+                onClick={() => {
+                  onSelectSpace(sp.id);
+                  setExpanded(false);
                 }}
               >
+                <span className="avatar" aria-hidden="true">
+                  {initials(sp.name)}
+                </span>
+                <span className="label">{sp.name}</span>
+                <span className="count">{sp.items.length}</span>
+              </button>
+              <button type="button" className="del" aria-label={`Delete ${sp.name}`} onClick={() => onDeleteSpace(sp.id, sp.name)}>
                 ✕
-              </span>
+              </button>
             </li>
           ))}
 
-          <li className="nav-item add-item" onClick={onAddSpace}>
-            <span className="avatar">+</span>
-            <span className="label">Add space</span>
+          <li>
+            <button type="button" className="nav-item add-item" onClick={onAddSpace}>
+              <span className="avatar" aria-hidden="true">
+                +
+              </span>
+              <span className="label">Add space</span>
+            </button>
           </li>
         </ul>
 
         <div className="sidebar-foot">
-          <div className="nav-item" onClick={onSignOut}>
-            <span className="avatar">⎋</span>
+          <button type="button" className="nav-item" onClick={onSignOut}>
+            <span className="avatar" aria-hidden="true">
+              ⎋
+            </span>
             <span className="label">Sign out</span>
-          </div>
+          </button>
         </div>
-      </div>
+      </nav>
       <div className={`backdrop${expanded ? ' open' : ''}`} onClick={() => setExpanded(false)} />
     </>
   );

@@ -47,15 +47,15 @@ export function AddItemModal({ open, onClose, onSave }: AddItemModalProps) {
     <Modal open={open} onClose={handleClose} title="Add item">
       <div className="modal-body">
         <div className="field">
-          <label>Name</label>
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Refrigerator" />
+          <label htmlFor="item-name">Name</label>
+          <input id="item-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Refrigerator" />
         </div>
         <div className="field">
-          <label>Brand / model</label>
-          <input value={model} onChange={(e) => setModel(e.target.value)} placeholder="e.g. Samsung RF28R7351SG" />
+          <label htmlFor="item-model">Brand / model</label>
+          <input id="item-model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="e.g. Samsung RF28R7351SG" />
         </div>
         <div className="field">
-          <label>Photo</label>
+          <label htmlFor="item-photo-input">Photo</label>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button type="button" className="btn small" onClick={() => fileInput.current?.click()}>
               📷 Take / choose photo
@@ -64,14 +64,23 @@ export function AddItemModal({ open, onClose, onSave }: AddItemModalProps) {
               {photoFile ? 'Photo captured ✓' : 'No photo yet'}
             </span>
           </div>
-          <input ref={fileInput} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handlePhotoChange} />
+          <input
+            id="item-photo-input"
+            ref={fileInput}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={handlePhotoChange}
+          />
           {photoPreview && (
             <img src={photoPreview} alt="" style={{ maxWidth: 140, marginTop: 10, borderRadius: 3, border: '1px solid var(--bp-line)' }} />
           )}
         </div>
         <div className="field">
-          <label>Notes</label>
+          <label htmlFor="item-notes">Notes</label>
           <textarea
+            id="item-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Anything worth remembering — purchase date, serial number, quirks…"

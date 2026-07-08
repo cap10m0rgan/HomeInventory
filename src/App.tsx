@@ -21,6 +21,9 @@ function AuthGate() {
 function App() {
   return (
     <div className="bp-field">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
       <div className="bp-crop tl" />
       <div className="bp-crop tr" />
       <div className="bp-crop bl" />

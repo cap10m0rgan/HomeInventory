@@ -21,8 +21,9 @@ export function AddSpaceModal({ open, onClose, onSave }: AddSpaceModalProps) {
     <Modal open={open} onClose={onClose} title="New space" width="narrow">
       <div className="modal-body">
         <div className="field">
-          <label>Name</label>
+          <label htmlFor="space-name">Name</label>
           <input
+            id="space-name"
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}

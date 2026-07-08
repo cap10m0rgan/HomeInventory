@@ -37,25 +37,41 @@ export function Login() {
       <div className="login-card bp-rise">
         <div className="login-brand">
           <BlueprintMark size={26} />
-          <span className="word">Home Base</span>
+          <h1 className="word">Home Base</h1>
         </div>
         <p className="login-sub">// sign in to your inventory</p>
 
-        {error && <div className="login-error">{error}</div>}
+        {error && (
+          <div className="login-error" role="alert">
+            {error}
+          </div>
+        )}
         {info && (
-          <div className="login-error" style={{ background: 'var(--bp-trace-dim)', borderColor: 'var(--bp-trace)', color: '#d3fff0' }}>
+          <div
+            className="login-error"
+            role="status"
+            style={{ background: 'var(--bp-trace-dim)', borderColor: 'var(--bp-trace)', color: '#d3fff0' }}
+          >
             {info}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
           <div className="field">
-            <label>Email</label>
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+            <label htmlFor="login-email">Email</label>
+            <input
+              id="login-email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+            />
           </div>
           <div className="field">
-            <label>Password</label>
+            <label htmlFor="login-password">Password</label>
             <input
+              id="login-password"
               type="password"
               required
               minLength={6}

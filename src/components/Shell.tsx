@@ -84,9 +84,13 @@ export function Shell({ userId, onSignOut }: { userId: string; onSignOut: () => 
         onSignOut={onSignOut}
       />
 
-      <div className="main">
+      <main className="main" id="main-content">
         <div className="topbar">
+          <label htmlFor="inventory-search" className="visually-hidden">
+            Search items and parts
+          </label>
           <input
+            id="inventory-search"
             className="search"
             placeholder="Search items and parts…"
             value={searchTerm}
@@ -95,12 +99,13 @@ export function Shell({ userId, onSignOut }: { userId: string; onSignOut: () => 
         </div>
 
         {!searchTerm.trim() && (
-          <div className="room-chips">
+          <div className="room-chips" role="group" aria-label="Spaces">
             {inventory.spaces.map((sp) => (
               <button
                 key={sp.id}
                 type="button"
                 className={`room-chip${sp.id === activeSpaceId ? ' active' : ''}`}
+                aria-current={sp.id === activeSpaceId ? 'true' : undefined}
                 onClick={() => setActiveSpaceId(sp.id)}
               >
                 {sp.name}
@@ -116,7 +121,7 @@ export function Shell({ userId, onSignOut }: { userId: string; onSignOut: () => 
           <>
             <div className="room-heading">
               <h1 className="bp-display">Search results</h1>
-              <span className="item-count">
+              <span className="item-count" role="status" aria-live="polite">
                 {searchResults?.length ?? 0} match{searchResults?.length === 1 ? '' : 'es'}
               </span>
             </div>
@@ -142,7 +147,7 @@ export function Shell({ userId, onSignOut }: { userId: string; onSignOut: () => 
         ) : (
           <p className="room-empty-hint">Open the menu and select or add a space.</p>
         )}
-      </div>
+      </main>
 
       <AddSpaceModal open={addSpaceOpen} onClose={() => setAddSpaceOpen(false)} onSave={(name) => {
         inventory.createSpace(name);
