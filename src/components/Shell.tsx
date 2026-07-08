@@ -76,52 +76,53 @@ export function Shell({ userId, onSignOut }: { userId: string; onSignOut: () => 
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div className="topbar-brand">
-          <Logo size={28} />
-          <p className="word">Home Base</p>
-        </div>
-        <div className="topbar-search">
-          <label htmlFor="inventory-search" className="visually-hidden">
-            Search items and parts
-          </label>
-          <input
-            id="inventory-search"
-            placeholder="Search items and parts…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <span className="topbar-spacer" />
-        <button type="button" className="btn ghost small topbar-signout" onClick={onSignOut}>
-          Sign out
-        </button>
-      </header>
-
-      {!searchTerm.trim() && (
-        <nav className="rooms-row" aria-label="Rooms">
-          {inventory.spaces.map((sp) => (
-            <button
-              key={sp.id}
-              type="button"
-              className={`room-chip${sp.id === activeSpaceId ? ' active' : ''}`}
-              aria-current={sp.id === activeSpaceId ? 'true' : undefined}
-              onClick={() => setActiveSpaceId(sp.id)}
-            >
-              {sp.name}
-              <span className="count">{sp.items.length}</span>
-            </button>
-          ))}
-          <button type="button" className="room-chip add-chip" onClick={() => setAddSpaceOpen(true)}>
-            + Room
+      <div className="app-header">
+        <header className="topbar">
+          <div className="topbar-brand">
+            <Logo size={28} />
+            <p className="word">Home Base</p>
+          </div>
+          <div className="topbar-search">
+            <label htmlFor="inventory-search" className="visually-hidden">
+              Search items and parts
+            </label>
+            <input
+              id="inventory-search"
+              placeholder="Search items and parts…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <button type="button" className="btn ghost small topbar-signout" onClick={onSignOut}>
+            Sign out
           </button>
-          {inventory.spaces.length > 0 && (
-            <button type="button" className="room-chip manage-chip" onClick={() => setManageSpacesOpen(true)}>
-              Manage
+        </header>
+
+        {!searchTerm.trim() && (
+          <nav className="rooms-row" aria-label="Rooms">
+            {inventory.spaces.map((sp) => (
+              <button
+                key={sp.id}
+                type="button"
+                className={`room-chip${sp.id === activeSpaceId ? ' active' : ''}`}
+                aria-current={sp.id === activeSpaceId ? 'true' : undefined}
+                onClick={() => setActiveSpaceId(sp.id)}
+              >
+                {sp.name}
+                <span className="count">{sp.items.length}</span>
+              </button>
+            ))}
+            <button type="button" className="room-chip add-chip" onClick={() => setAddSpaceOpen(true)}>
+              + Room
             </button>
-          )}
-        </nav>
-      )}
+            {inventory.spaces.length > 0 && (
+              <button type="button" className="room-chip manage-chip" onClick={() => setManageSpacesOpen(true)}>
+                Manage
+              </button>
+            )}
+          </nav>
+        )}
+      </div>
 
       <main className="main" id="main-content">
         {searchTerm.trim() ? (

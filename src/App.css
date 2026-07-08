@@ -25,16 +25,24 @@
   min-height: 100vh;
 }
 
-/* ---- top bar ------------------------------------------------------------*/
-.topbar {
+/* ---- sticky header (top bar + rooms row as one unit) ---------------------
+   These stick together via a single wrapper rather than each carrying its
+   own `position: sticky` with a hardcoded offset — if the top bar ever grows
+   taller than --topbar-h (e.g. wrapping on a narrow phone), an offset-based
+   approach leaves the rooms row sticking underneath it instead of below it. */
+.app-header {
   position: sticky;
   top: 0;
   z-index: 30;
-  height: var(--topbar-h);
+}
+
+.topbar {
+  min-height: var(--topbar-h);
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 0 20px;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 20px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
@@ -57,17 +65,19 @@
   border-radius: 7px;
 }
 .topbar-search {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   max-width: 440px;
 }
 .topbar-search input {
   width: 100%;
+  min-width: 0;
   background: var(--surface-sunken);
   border: 1.5px solid var(--border);
   border-radius: 999px;
   padding: 9px 16px;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 16px;
 }
 .topbar-search input::placeholder {
   color: var(--ink-faint);
@@ -77,18 +87,12 @@
   border-color: var(--accent);
   background: var(--surface);
 }
-.topbar-spacer {
-  flex: 1;
-}
 .topbar-signout {
   flex-shrink: 0;
 }
 
 /* ---- rooms row -----------------------------------------------------------*/
 .rooms-row {
-  position: sticky;
-  top: var(--topbar-h);
-  z-index: 29;
   display: flex;
   gap: 8px;
   overflow-x: auto;
@@ -756,8 +760,8 @@
     padding: 20px 14px 60px;
   }
   .topbar {
-    padding: 0 14px;
-    gap: 12px;
+    padding: 10px 14px;
+    gap: 10px;
   }
   .topbar-brand .word {
     display: none;

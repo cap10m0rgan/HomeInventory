@@ -160,12 +160,25 @@ export function useInventory(userId: string | undefined) {
     }, "Couldn't add photo");
   }
 
-  async function deletePhoto(photoId: string, storagePath: string) {
+  async function deletePhoto(itemId: string, photoId: string, storagePath: string, wasPrimary: boolean) {
     await guarded(async () => {
       const { error: dbErr } = await supabase.from('item_photos').delete().eq('id', photoId);
       if (dbErr) throw dbErr;
       // Best-effort: reclaim storage. Not fatal if this fails (e.g. already gone).
       await supabase.storage.from(PHOTOS_BUCKET).remove([storagePath]);
+
+      if (wasPrimary) {
+        const { data: remaining } = await supabase
+          .from('item_photos')
+          .select('id')
+          .eq('item_id', itemId)
+          .order('sort_order')
+          .order('created_at')
+          .limit(1);
+        if (remaining && remaining.length > 0) {
+          await supabase.from('item_photos').update({ is_primary: true }).eq('id', remaining[0].id);
+        }
+      }
       await refresh();
     }, "Couldn't delete photo");
   }

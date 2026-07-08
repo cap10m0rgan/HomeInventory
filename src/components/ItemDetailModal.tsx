@@ -10,7 +10,7 @@ interface ItemDetailModalProps {
   space: Space | null;
   onClose: () => void;
   onAddPhoto: (itemId: string, file: File, makePrimary: boolean) => void;
-  onDeletePhoto: (photoId: string, storagePath: string) => void;
+  onDeletePhoto: (itemId: string, photoId: string, storagePath: string, wasPrimary: boolean) => void;
   onSetPrimaryPhoto: (itemId: string, photoId: string) => void;
   onAttachManual: (itemId: string, file: File) => void;
   onAddPart: (itemId: string, part: { type: PartType; name: string; link: string; notes: string }) => void;
@@ -103,7 +103,7 @@ export function ItemDetailModal({
                 type="button"
                 className="gallery-remove"
                 aria-label={`Remove photo ${i + 1}`}
-                onClick={() => onDeletePhoto(p.id, p.storage_path)}
+                onClick={() => onDeletePhoto(d.id, p.id, p.storage_path, p.is_primary)}
               >
                 ✕
               </button>
