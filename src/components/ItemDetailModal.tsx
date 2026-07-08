@@ -39,6 +39,7 @@ export function ItemDetailModal({
 
   const addPhotoInput = useRef<HTMLInputElement>(null);
   const manualInput = useRef<HTMLInputElement>(null);
+  const swipeStartX = useRef<number | null>(null);
 
   // Retain the last non-null item/space so the modal's content doesn't blank
   // out mid-close while Modal's exit animation is still playing.
@@ -76,14 +77,50 @@ export function ItemDetailModal({
   const manualUrl = publicUrlFor(MANUALS_BUCKET, d.manual_path);
   const manualSearchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(`${d.make} ${d.model || d.name} manual pdf`.trim())}`;
 
+  function goPrevPhoto() {
+    if (sortedPhotos.length < 2) return;
+    setActivePhotoIdx((i) => (i - 1 + sortedPhotos.length) % sortedPhotos.length);
+  }
+  function goNextPhoto() {
+    if (sortedPhotos.length < 2) return;
+    setActivePhotoIdx((i) => (i + 1) % sortedPhotos.length);
+  }
+  function handleSwipeStart(e: React.PointerEvent) {
+    swipeStartX.current = e.clientX;
+  }
+  function handleSwipeEnd(e: React.PointerEvent) {
+    if (swipeStartX.current === null) return;
+    const delta = e.clientX - swipeStartX.current;
+    swipeStartX.current = null;
+    if (Math.abs(delta) < 40) return;
+    if (delta < 0) goNextPhoto();
+    else goPrevPhoto();
+  }
+
   return (
     <Modal open={!!item} onClose={onClose} title={d.name} width="wide">
       <div className="gallery">
-        <div className="gallery-main">
+        <div className="gallery-main" onPointerDown={handleSwipeStart} onPointerUp={handleSwipeEnd}>
           {activePhoto ? (
-            <img src={publicUrlFor(PHOTOS_BUCKET, activePhoto.storage_path) ?? undefined} alt={`${d.name} photo ${activePhotoIdx + 1}`} />
+            <img
+              src={publicUrlFor(PHOTOS_BUCKET, activePhoto.storage_path) ?? undefined}
+              alt={`${d.name} photo ${activePhotoIdx + 1} of ${sortedPhotos.length}`}
+            />
           ) : (
             'No photos yet'
+          )}
+          {sortedPhotos.length > 1 && (
+            <>
+              <button type="button" className="gallery-nav prev" aria-label="Previous photo" onClick={goPrevPhoto}>
+                ‹
+              </button>
+              <button type="button" className="gallery-nav next" aria-label="Next photo" onClick={goNextPhoto}>
+                ›
+              </button>
+              <span className="gallery-position" role="status" aria-live="polite">
+                {activePhotoIdx + 1} / {sortedPhotos.length}
+              </span>
+            </>
           )}
         </div>
         <div className="gallery-strip">
