@@ -1,0 +1,18 @@
+{
+  "name": "Home Base — Inventory",
+  "short_name": "Home Base",
+  "description": "A spec-sheet inventory for everything you own.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b2f4e",
+  "theme_color": "#0b2f4e",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
