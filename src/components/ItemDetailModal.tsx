@@ -81,7 +81,10 @@ export function ItemDetailModal({
       <div className="gallery">
         <div className="gallery-main">
           {activePhoto ? (
-            <img src={publicUrlFor(PHOTOS_BUCKET, activePhoto.storage_path) ?? undefined} alt={`${d.name} photo ${activePhotoIdx + 1}`} />
+            <img
+              src={publicUrlFor(PHOTOS_BUCKET, activePhoto.storage_path) ?? undefined}
+              alt={`${d.name} photo ${activePhotoIdx + 1} of ${sortedPhotos.length}`}
+            />
           ) : (
             'No photos yet'
           )}
