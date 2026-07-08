@@ -40,7 +40,7 @@ export function ScanLabelPanel({ onAssignModel, onAssignSerial }: ScanLabelPanel
         <button type="button" className="btn small" onClick={() => fileInput.current?.click()} disabled={scanning}>
           🔎 Scan model/serial label
         </button>
-        <span className="field-hint" style={{ margin: 0 }}>
+        <span className="field-hint" style={{ margin: 0 }} role="status" aria-live="polite">
           {scanning ? `Reading label… ${progress}%` : 'Take or choose a photo of the rating plate'}
         </span>
       </div>

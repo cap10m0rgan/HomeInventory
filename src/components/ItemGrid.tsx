@@ -101,7 +101,7 @@ function ItemCard({ item, index, onOpenItem }: { item: Item; index: number; onOp
             <button type="button" className="thumb-nav next" aria-label="Next photo" onClick={showNext}>
               ›
             </button>
-            <span className="photo-count-badge">
+            <span className="photo-count-badge" role="status" aria-live="polite">
               {activeIdx + 1} / {sortedPhotos.length}
             </span>
           </>
