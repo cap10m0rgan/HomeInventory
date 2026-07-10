@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { MANUALS_BUCKET, PHOTOS_BUCKET, supabase } from '../lib/supabase';
+import { PHOTOS_BUCKET, REFERENCES_BUCKET, supabase } from '../lib/supabase';
 import { compressImage } from '../lib/image';
 import { useToasts } from './useToasts';
-import type { Part, PartType, Photo, Space } from '../types';
+import type { Part, PartType, Photo, Reference, ReferenceKind, Space } from '../types';
 
 export function useInventory(userId: string | undefined) {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -16,14 +16,16 @@ export function useInventory(userId: string | undefined) {
       { data: itemsData, error: itemsErr },
       { data: partsData, error: partsErr },
       { data: photosData, error: photosErr },
+      { data: referencesData, error: referencesErr },
     ] = await Promise.all([
       supabase.from('spaces').select('*').order('sort_order').order('created_at'),
       supabase.from('items').select('*').order('created_at'),
       supabase.from('parts').select('*').order('created_at'),
       supabase.from('item_photos').select('*').order('sort_order').order('created_at'),
+      supabase.from('item_references').select('*').order('created_at'),
     ]);
 
-    const err = spacesErr || itemsErr || partsErr || photosErr;
+    const err = spacesErr || itemsErr || partsErr || photosErr || referencesErr;
     if (err) {
       showToast('error', "Couldn't load your inventory", err.message);
       setLoading(false);
@@ -44,10 +46,22 @@ export function useInventory(userId: string | undefined) {
       photosByItem.set(ph.item_id, list);
     });
 
+    const referencesByItem = new Map<string, Reference[]>();
+    (referencesData ?? []).forEach((r) => {
+      const list = referencesByItem.get(r.item_id) ?? [];
+      list.push(r as Reference);
+      referencesByItem.set(r.item_id, list);
+    });
+
     const itemsBySpace = new Map<string, Space['items']>();
     (itemsData ?? []).forEach((it) => {
       const list = itemsBySpace.get(it.space_id) ?? [];
-      list.push({ ...it, parts: partsByItem.get(it.id) ?? [], photos: photosByItem.get(it.id) ?? [] });
+      list.push({
+        ...it,
+        parts: partsByItem.get(it.id) ?? [],
+        photos: photosByItem.get(it.id) ?? [],
+        references: referencesByItem.get(it.id) ?? [],
+      });
       itemsBySpace.set(it.space_id, list);
     });
 
@@ -192,19 +206,30 @@ export function useInventory(userId: string | undefined) {
     }, "Couldn't set cover photo");
   }
 
-  async function attachManual(itemId: string, file: File) {
+  async function addReference(itemId: string, file: File, kind: ReferenceKind) {
     if (!userId) return;
     await guarded(async () => {
       const path = `${userId}/${itemId}/${crypto.randomUUID()}-${file.name}`;
-      const { error: uploadErr } = await supabase.storage.from(MANUALS_BUCKET).upload(path, file, { contentType: 'application/pdf' });
+      const { error: uploadErr } = await supabase.storage
+        .from(REFERENCES_BUCKET)
+        .upload(path, file, { contentType: file.type || 'application/octet-stream' });
       if (uploadErr) throw uploadErr;
-      const { error: updateErr } = await supabase
-        .from('items')
-        .update({ manual_path: path, manual_filename: file.name })
-        .eq('id', itemId);
-      if (updateErr) throw updateErr;
+      const { error: insertErr } = await supabase
+        .from('item_references')
+        .insert({ item_id: itemId, user_id: userId, kind, filename: file.name, storage_path: path, mime_type: file.type || '' });
+      if (insertErr) throw insertErr;
       await refresh();
-    }, "Couldn't attach manual");
+    }, "Couldn't attach file");
+  }
+
+  async function deleteReference(referenceId: string, storagePath: string) {
+    await guarded(async () => {
+      const { error } = await supabase.from('item_references').delete().eq('id', referenceId);
+      if (error) throw error;
+      // Best-effort: reclaim storage. Not fatal if this fails (e.g. already gone).
+      await supabase.storage.from(REFERENCES_BUCKET).remove([storagePath]);
+      await refresh();
+    }, "Couldn't remove file");
   }
 
   async function addPart(itemId: string, part: { type: PartType; name: string; link: string; notes: string }) {
@@ -235,7 +260,8 @@ export function useInventory(userId: string | undefined) {
     addPhoto,
     deletePhoto,
     setPrimaryPhoto,
-    attachManual,
+    addReference,
+    deleteReference,
     addPart,
     deletePart,
   };

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Modal } from './Modal';
-import type { Item, Part, PartType, Photo, Space } from '../types';
-import { MANUALS_BUCKET, PHOTOS_BUCKET, publicUrlFor } from '../lib/supabase';
+import { ReferenceSection } from './ReferenceSection';
+import type { Item, Part, PartType, Photo, ReferenceKind, Space } from '../types';
+import { PHOTOS_BUCKET, publicUrlFor } from '../lib/supabase';
 
 const PART_TYPES: PartType[] = ['Filter', 'Replacement part', 'Battery', 'Consumable', 'Accessory', 'Other'];
 
@@ -12,7 +13,8 @@ interface ItemDetailModalProps {
   onAddPhoto: (itemId: string, file: File, makePrimary: boolean) => void;
   onDeletePhoto: (itemId: string, photoId: string, storagePath: string, wasPrimary: boolean) => void;
   onSetPrimaryPhoto: (itemId: string, photoId: string) => void;
-  onAttachManual: (itemId: string, file: File) => void;
+  onAddReference: (itemId: string, file: File, kind: ReferenceKind) => void;
+  onDeleteReference: (referenceId: string, storagePath: string) => void;
   onAddPart: (itemId: string, part: { type: PartType; name: string; link: string; notes: string }) => void;
   onDeletePart: (partId: string) => void;
   onDeleteItem: (itemId: string, name: string) => void;
@@ -25,7 +27,8 @@ export function ItemDetailModal({
   onAddPhoto,
   onDeletePhoto,
   onSetPrimaryPhoto,
-  onAttachManual,
+  onAddReference,
+  onDeleteReference,
   onAddPart,
   onDeletePart,
   onDeleteItem,
@@ -38,7 +41,6 @@ export function ItemDetailModal({
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
 
   const addPhotoInput = useRef<HTMLInputElement>(null);
-  const manualInput = useRef<HTMLInputElement>(null);
 
   // Retain the last non-null item/space so the modal's content doesn't blank
   // out mid-close while Modal's exit animation is still playing.
@@ -73,8 +75,6 @@ export function ItemDetailModal({
   const { item: d, space: s } = display;
   const sortedPhotos: Photo[] = [...d.photos].sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0) || a.sort_order - b.sort_order);
   const activePhoto = sortedPhotos[Math.min(activePhotoIdx, sortedPhotos.length - 1)] ?? null;
-  const manualUrl = publicUrlFor(MANUALS_BUCKET, d.manual_path);
-  const manualSearchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(`${d.make} ${d.model || d.name} manual pdf`.trim())}`;
 
   return (
     <Modal open={!!item} onClose={onClose} title={d.name} width="wide">
@@ -164,42 +164,24 @@ export function ItemDetailModal({
         </div>
       </div>
 
-      <div className="detail-section">
-        <h3>Reference</h3>
-        <button
-          type="button"
-          className="link-btn"
-          disabled={!manualUrl}
-          onClick={() => manualUrl && window.open(manualUrl, '_blank', 'noopener')}
-        >
-          📄 {manualUrl ? `Show manual${d.manual_filename ? ' — ' + d.manual_filename : ''}` : 'Show manual'}
-        </button>
-        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-          <a className="btn small" href={manualSearchUrl} target="_blank" rel="noopener noreferrer">
-            🔍 Find manual online
-          </a>
-          <button type="button" className="btn small" onClick={() => manualInput.current?.click()}>
-            📎 Attach manual (PDF)
-          </button>
-        </div>
-        <input
-          ref={manualInput}
-          type="file"
-          accept="application/pdf"
-          aria-label="Manual PDF"
-          style={{ display: 'none' }}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) onAttachManual(d.id, file);
-            e.target.value = '';
-          }}
-        />
-        {d.notes && (
-          <p className="notes-text" style={{ marginTop: 12 }}>
+      <ReferenceSection
+        itemId={d.id}
+        itemName={d.name}
+        make={d.make}
+        model={d.model}
+        references={d.references}
+        onAddReference={onAddReference}
+        onDeleteReference={onDeleteReference}
+      />
+
+      {d.notes && (
+        <div className="detail-section">
+          <h3>Notes</h3>
+          <p className="notes-text" style={{ margin: 0 }}>
             {d.notes}
           </p>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="detail-section">
         <h3>Parts &amp; consumables</h3>

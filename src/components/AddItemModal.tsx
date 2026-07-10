@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import { Modal } from './Modal';
-import { ScanLabelPanel } from './ScanLabelPanel';
 
 interface AddItemModalProps {
   open: boolean;
@@ -71,8 +70,6 @@ export function AddItemModal({ open, onClose, onSave }: AddItemModalProps) {
           <label htmlFor="item-serial">Serial number</label>
           <input id="item-serial" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} placeholder="e.g. 0N123ABCD456" />
         </div>
-
-        <ScanLabelPanel onAssignModel={setModel} onAssignSerial={setSerialNumber} />
 
         <div className="field" style={{ marginTop: 16 }}>
           <label htmlFor="item-photo-input">Photo</label>

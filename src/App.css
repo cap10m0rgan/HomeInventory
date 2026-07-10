@@ -8,7 +8,8 @@
 .thumb-nav,
 .photo-thumb-select,
 .inline-add-toggle,
-.gallery-remove {
+.gallery-remove,
+button.ref-menu-option {
   appearance: none;
   -webkit-appearance: none;
   background: none;
@@ -661,35 +662,135 @@
   margin-top: 8px;
 }
 
-/* ---- OCR scan panel -------------------------------------------------------*/
-.scan-panel {
-  margin-top: 12px;
-  padding: 14px;
-  background: var(--surface-sunken);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-}
-.scan-candidates {
+/* ---- references section ---------------------------------------------------*/
+/* Section heading with an action on the right; carries the underline that
+   .detail-section h3 normally draws so the rule spans the full row. */
+.section-head {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 22px 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
 }
-.scan-candidates > div {
-  flex-wrap: wrap;
+.section-head h3 {
+  margin: 0;
+  padding: 0;
+  border-bottom: none;
 }
-.scan-chip {
-  font-family: var(--font-mono);
+.section-add {
+  font: inherit;
   font-size: 12.5px;
-  padding: 6px 11px;
-  border-radius: 999px;
-  border: 1.5px solid var(--control-border);
+  font-weight: 700;
+  color: var(--accent-hover);
   background: var(--surface);
+  border: 1.5px solid var(--control-border);
+  border-radius: 999px;
+  padding: 5px 12px;
   cursor: pointer;
 }
-.scan-chip:hover {
+.section-add:hover,
+.section-add[aria-expanded='true'] {
   border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ref-menu-anchor {
+  position: relative;
+}
+.ref-menu {
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 30;
+  width: min(300px, calc(100vw - 60px));
+  background: var(--surface);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 12px 32px rgba(28, 27, 24, 0.16);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ref-menu-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+.ref-menu-option:hover {
+  background: var(--surface-2);
+}
+.ref-menu-option small {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ink-dim);
+  margin-top: 2px;
+}
+.ref-menu-icon {
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.ref-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ref-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--border);
+}
+.ref-row:last-child {
+  border-bottom: none;
+}
+.ref-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  background: var(--surface-2);
+  color: var(--ink-dim);
+}
+.ref-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.ref-name {
+  font-size: 13.5px;
+  font-weight: 600;
   color: var(--accent-hover);
+  word-break: break-word;
+}
+a.ref-name {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+a.ref-name:hover {
+  color: var(--accent);
+}
+.ref-meta {
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  color: var(--ink-faint);
 }
 
 /* ---- toasts --------------------------------------------------------------*/

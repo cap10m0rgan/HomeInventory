@@ -111,7 +111,11 @@ function ItemCard({ item, index, onOpenItem }: { item: Item; index: number; onOp
         <div className="name">{item.name}</div>
         <div className="subtitle">{subtitle || ' '}</div>
         <div className="meta">
-          {item.manual_path && <span className="pill has">Manual on file</span>}
+          {item.references.length > 0 && (
+            <span className="pill has">
+              {item.references.length} reference{item.references.length === 1 ? '' : 's'}
+            </span>
+          )}
           {item.parts.length > 0 && (
             <span className="pill">
               {item.parts.length} part{item.parts.length === 1 ? '' : 's'}
