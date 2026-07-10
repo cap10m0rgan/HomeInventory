@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { PHOTOS_BUCKET, REFERENCES_BUCKET, supabase } from '../lib/supabase';
-import { compressImage } from '../lib/image';
+import { compressImage, rotateImage } from '../lib/image';
 import { useToasts } from './useToasts';
 import type { Part, PartType, Photo, Reference, Space } from '../types';
 
@@ -102,7 +102,7 @@ export function useInventory(userId: string | undefined) {
 
   async function createItem(
     spaceId: string,
-    fields: { name: string; make: string; model: string; serialNumber: string; notes: string; photoFile: File | null },
+    fields: { name: string; make: string; model: string; serialNumber: string; notes: string; photoFiles: File[] },
   ) {
     if (!userId) return;
     await guarded(async () => {
@@ -121,8 +121,10 @@ export function useInventory(userId: string | undefined) {
         .single();
       if (error) throw error;
 
-      if (fields.photoFile) {
-        await addPhotoInternal(inserted.id, fields.photoFile, true);
+      // Sequential on purpose: the first photo is the cover, and uploading in
+      // order keeps sort stable (rows are ordered by created_at).
+      for (let i = 0; i < fields.photoFiles.length; i++) {
+        await addPhotoInternal(inserted.id, fields.photoFiles[i], i === 0);
       }
       await refresh();
     }, "Couldn't add item");
@@ -204,6 +206,30 @@ export function useInventory(userId: string | undefined) {
     }, "Couldn't delete photo");
   }
 
+  async function rotatePhoto(photoId: string, storagePath: string) {
+    if (!userId) return;
+    await guarded(async () => {
+      const { data: blob, error: dlErr } = await supabase.storage.from(PHOTOS_BUCKET).download(storagePath);
+      if (dlErr) throw dlErr;
+      const rotated = await rotateImage(blob);
+      // Upload under a fresh path instead of overwriting: the public URL is
+      // CDN-cached, so replacing the same object would keep serving the old
+      // orientation for a while.
+      const dir = storagePath.slice(0, storagePath.lastIndexOf('/'));
+      const newPath = `${dir}/${crypto.randomUUID()}.jpg`;
+      const { error: upErr } = await supabase.storage.from(PHOTOS_BUCKET).upload(newPath, rotated, { contentType: 'image/jpeg' });
+      if (upErr) throw upErr;
+      const { error: dbErr } = await supabase.from('item_photos').update({ storage_path: newPath }).eq('id', photoId);
+      if (dbErr) {
+        // Roll back the orphan upload before surfacing the failure.
+        await supabase.storage.from(PHOTOS_BUCKET).remove([newPath]);
+        throw dbErr;
+      }
+      await supabase.storage.from(PHOTOS_BUCKET).remove([storagePath]);
+      await refresh();
+    }, "Couldn't rotate photo");
+  }
+
   async function setPrimaryPhoto(itemId: string, photoId: string) {
     await guarded(async () => {
       await supabase.from('item_photos').update({ is_primary: false }).eq('item_id', itemId).eq('is_primary', true);
@@ -270,6 +296,7 @@ export function useInventory(userId: string | undefined) {
     addPhoto,
     deletePhoto,
     setPrimaryPhoto,
+    rotatePhoto,
     addReference,
     deleteReference,
     addPart,

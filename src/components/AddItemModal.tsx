@@ -1,10 +1,17 @@
 import { useRef, useState } from 'react';
 import { Modal } from './Modal';
+import { rotateImage } from '../lib/image';
 
 interface AddItemModalProps {
   open: boolean;
   onClose: () => void;
-  onSave: (fields: { name: string; make: string; model: string; serialNumber: string; notes: string; photoFile: File | null }) => void;
+  onSave: (fields: { name: string; make: string; model: string; serialNumber: string; notes: string; photoFiles: File[] }) => void;
+}
+
+interface PendingPhoto {
+  id: string;
+  file: File;
+  preview: string;
 }
 
 export function AddItemModal({ open, onClose, onSave }: AddItemModalProps) {
@@ -13,8 +20,7 @@ export function AddItemModal({ open, onClose, onSave }: AddItemModalProps) {
   const [model, setModel] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
   const [notes, setNotes] = useState('');
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<PendingPhoto[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
 
   function reset() {
@@ -23,8 +29,10 @@ export function AddItemModal({ open, onClose, onSave }: AddItemModalProps) {
     setModel('');
     setSerialNumber('');
     setNotes('');
-    setPhotoFile(null);
-    setPhotoPreview(null);
+    setPhotos((prev) => {
+      prev.forEach((p) => URL.revokeObjectURL(p.preview));
+      return [];
+    });
   }
 
   function handleClose() {
@@ -35,16 +43,48 @@ export function AddItemModal({ open, onClose, onSave }: AddItemModalProps) {
   function handleSave() {
     const trimmed = name.trim();
     if (!trimmed) return;
-    onSave({ name: trimmed, make: make.trim(), model: model.trim(), serialNumber: serialNumber.trim(), notes: notes.trim(), photoFile });
+    onSave({
+      name: trimmed,
+      make: make.trim(),
+      model: model.trim(),
+      serialNumber: serialNumber.trim(),
+      notes: notes.trim(),
+      photoFiles: photos.map((p) => p.file),
+    });
     reset();
   }
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > 0) {
+      setPhotos((prev) => [
+        ...prev,
+        ...files.map((file) => ({ id: crypto.randomUUID(), file, preview: URL.createObjectURL(file) })),
+      ]);
+    }
     e.target.value = '';
+  }
+
+  function removePhoto(id: string) {
+    setPhotos((prev) => {
+      const gone = prev.find((p) => p.id === id);
+      if (gone) URL.revokeObjectURL(gone.preview);
+      return prev.filter((p) => p.id !== id);
+    });
+  }
+
+  async function rotatePendingPhoto(id: string) {
+    const target = photos.find((p) => p.id === id);
+    if (!target) return;
+    const rotated = await rotateImage(target.file);
+    const file = new File([rotated], target.file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
+    setPhotos((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        URL.revokeObjectURL(p.preview);
+        return { ...p, file, preview: URL.createObjectURL(file) };
+      }),
+    );
   }
 
   return (
@@ -72,18 +112,49 @@ export function AddItemModal({ open, onClose, onSave }: AddItemModalProps) {
         </div>
 
         <div className="field" style={{ marginTop: 16 }}>
-          <label htmlFor="item-photo-input">Photo</label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <label htmlFor="item-photo-input">Photos</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <button type="button" className="btn small" onClick={() => fileInput.current?.click()}>
-              📷 Add photo
+              📷 Add photos
             </button>
-            <span className="field-hint" style={{ margin: 0 }}>
-              {photoFile ? 'Photo added ✓' : 'Camera or photo library'}
+            <span className="field-hint" style={{ margin: 0 }} role="status">
+              {photos.length > 0
+                ? `${photos.length} photo${photos.length === 1 ? '' : 's'} — the first is the cover`
+                : 'Camera or photo library — you can add several'}
             </span>
           </div>
-          <input id="item-photo-input" ref={fileInput} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
-          {photoPreview && (
-            <img src={photoPreview} alt="" style={{ maxWidth: 140, marginTop: 10, borderRadius: 8, border: '1px solid var(--border)' }} />
+          <input
+            id="item-photo-input"
+            ref={fileInput}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: 'none' }}
+            onChange={handlePhotoChange}
+          />
+          {photos.length > 0 && (
+            <>
+              <ul className="pending-photos">
+                {photos.map((p, i) => (
+                  <li key={p.id} className="pending-photo">
+                    <img src={p.preview} alt={`Photo ${i + 1} preview`} />
+                    {i === 0 && <span className="cover-badge">Cover</span>}
+                    <div className="pending-photo-actions">
+                      <button type="button" aria-label={`Rotate photo ${i + 1}`} onClick={() => rotatePendingPhoto(p.id)}>
+                        ⟳
+                      </button>
+                      <button type="button" aria-label={`Remove photo ${i + 1}`} onClick={() => removePhoto(p.id)}>
+                        ✕
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <p className="field-hint">
+                Tip: include a shot of the rating plate — long-press its preview to copy the model and serial numbers right
+                into the fields above.
+              </p>
+            </>
           )}
         </div>
 

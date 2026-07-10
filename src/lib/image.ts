@@ -1,4 +1,24 @@
-export function compressImage(file: File, maxDim = 1000, quality = 0.82): Promise<Blob> {
+/**
+ * Rotate an image 90° clockwise, returning a JPEG blob. createImageBitmap
+ * applies EXIF orientation first, so this rotates what the user actually
+ * sees, not the sensor-native pixels.
+ */
+export async function rotateImage(blob: Blob): Promise<Blob> {
+  const bitmap = await createImageBitmap(blob);
+  const canvas = document.createElement('canvas');
+  canvas.width = bitmap.height;
+  canvas.height = bitmap.width;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas unsupported');
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(Math.PI / 2);
+  ctx.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((out) => (out ? resolve(out) : reject(new Error('Rotation failed'))), 'image/jpeg', 0.92);
+  });
+}
+
+export function compressImage(file: File | Blob, maxDim = 1000, quality = 0.82): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(reader.error);

@@ -228,6 +228,7 @@ export function Shell({ userId, onSignOut }: { userId: string; onSignOut: () => 
         onAddPhoto={inventory.addPhoto}
         onDeletePhoto={inventory.deletePhoto}
         onSetPrimaryPhoto={inventory.setPrimaryPhoto}
+        onRotatePhoto={inventory.rotatePhoto}
         referenceKindSuggestions={referenceKindSuggestions}
         onAddReference={inventory.addReference}
         onDeleteReference={inventory.deleteReference}
