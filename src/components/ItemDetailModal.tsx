@@ -19,6 +19,7 @@ interface ItemDetailModalProps {
   onAddPhoto: (itemId: string, file: File, makePrimary: boolean) => void;
   onDeletePhoto: (itemId: string, photoId: string, storagePath: string, wasPrimary: boolean) => void;
   onSetPrimaryPhoto: (itemId: string, photoId: string) => void;
+  onRotatePhoto: (photoId: string, storagePath: string) => void;
   referenceKindSuggestions: string[];
   onAddReference: (itemId: string, file: File, kind: string) => void;
   onDeleteReference: (referenceId: string, storagePath: string) => void;
@@ -36,6 +37,7 @@ export function ItemDetailModal({
   onAddPhoto,
   onDeletePhoto,
   onSetPrimaryPhoto,
+  onRotatePhoto,
   referenceKindSuggestions,
   onAddReference,
   onDeleteReference,
@@ -174,11 +176,16 @@ export function ItemDetailModal({
             e.target.value = '';
           }}
         />
-        {activePhoto && !activePhoto.is_primary && (
+        {activePhoto && (
           <div className="gallery-actions">
-            <button type="button" className="btn small" onClick={() => onSetPrimaryPhoto(d.id, activePhoto.id)}>
-              ⭐ Set as cover photo
+            <button type="button" className="btn small" onClick={() => onRotatePhoto(activePhoto.id, activePhoto.storage_path)}>
+              ⟳ Rotate
             </button>
+            {!activePhoto.is_primary && (
+              <button type="button" className="btn small" onClick={() => onSetPrimaryPhoto(d.id, activePhoto.id)}>
+                ⭐ Set as cover photo
+              </button>
+            )}
           </div>
         )}
       </div>
