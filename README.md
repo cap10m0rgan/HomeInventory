@@ -1,7 +1,8 @@
 # Home Base — Home Inventory
 
 Home asset tracking. Appliances and electronics — organized by space, with
-photos, manuals, and parts/consumables on file for each item.
+photos, reference files (manuals, parts lists, receipts…), and
+parts/consumables on file for each item.
 
 A Vite + React + TypeScript frontend, backed by [Supabase](https://supabase.com)
 (Postgres + Auth + Storage), auto-deployed to **GitHub Pages** on every push
@@ -14,8 +15,9 @@ to `main`.
 1. Go to [supabase.com](https://supabase.com) and create a free account/project.
 2. In the project dashboard, open **SQL Editor → New query**, paste the contents
    of [`supabase/schema.sql`](./supabase/schema.sql), and run it. This creates
-   the `spaces`, `items`, and `parts` tables, row-level security policies, and
-   the two storage buckets (`item-photos`, `item-manuals`).
+   the `spaces`, `items`, `item_photos`, `item_references`, and `parts` tables,
+   row-level security policies, and the two storage buckets (`item-photos`,
+   `item-manuals` — the latter holds all reference files, the id is historical).
 3. Go to **Project Settings → API** and copy:
    - **Project URL** → `VITE_SUPABASE_URL`
    - **anon public** key → `VITE_SUPABASE_ANON_KEY`
@@ -45,11 +47,16 @@ This app has no admin invite system — it's meant for one household.
 
 ### Upgrading an existing project (already ran `schema.sql` once)
 
-If you set this up before multi-photo support and Make/Serial Number fields
-existed, run [`supabase/migrations/0002_photos_and_fields.sql`](./supabase/migrations/0002_photos_and_fields.sql)
-in the SQL editor. It adds the new `item_photos` table and `items.make` /
-`items.serial_number` columns, migrates any existing single photo per item
-into the new table as its cover photo, and is safe to re-run.
+Run the files in [`supabase/migrations/`](./supabase/migrations/) that you
+haven't applied yet, in order, in the SQL editor. Each is safe to re-run:
+
+- `0002_photos_and_fields.sql` — adds the `item_photos` table and
+  `items.make` / `items.serial_number` columns, migrating any existing single
+  photo per item into the new table as its cover photo.
+- `0003_references.sql` — adds the `item_references` table (typed reference
+  files: manual, parts list, receipt, warranty…), preserving any
+  already-attached manual as a `Manual` reference, and drops the old
+  single-manual columns from `items`.
 
 ## Local development
 
@@ -61,23 +68,19 @@ npm run dev
 
 ## Data model & privacy notes
 
-- Every row in `spaces` / `items` / `item_photos` / `parts` is scoped to
-  `auth.uid()` via row-level security — only your signed-in account can read
-  or write them.
-- Photo and manual storage buckets are **public-read** (so `<img>` tags and
-  manual links work without signed-URL refresh logic), but object paths are
+- Every row in `spaces` / `items` / `item_photos` / `item_references` /
+  `parts` is scoped to `auth.uid()` via row-level security — only your
+  signed-in account can read or write them.
+- Photo and reference storage buckets are **public-read** (so `<img>` tags
+  and file links work without signed-URL refresh logic), but object paths are
   random UUIDs and the buckets aren't browsable — effectively unlisted rather
   than indexed. Uploads/deletes are still restricted to the owning account.
   If you want stricter privacy later, switch the buckets to private and
   generate signed URLs on read.
 
-## Notes on the OCR "Scan model/serial label" feature
+## Tip: capturing model/serial numbers
 
-Text recognition runs entirely client-side via
-[Tesseract.js](https://github.com/naptha/tesseract.js) (lazy-loaded only when
-you tap the scan button, so it doesn't add to the initial page weight).
-Recognized text lines are shown as candidates you tap to fill into Model or
-Serial Number — nothing is auto-filled silently, since OCR on small,
-reflective, or angled rating plates is inherently unreliable. For best
-results: fill the frame with the plate, use even lighting, and hold the
-camera as parallel to the label as possible.
+Rather than typing them off the rating plate, take a photo of the plate with
+your phone and use the OS text-selection built into the photo viewer
+(long-press the text in the image on iOS or Android) to copy the model and
+serial numbers, then paste them into the item form.

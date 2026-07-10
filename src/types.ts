@@ -19,6 +19,18 @@ export interface Photo {
   created_at: string;
 }
 
+export type ReferenceKind = 'Manual' | 'Parts list' | 'Receipt' | 'Warranty' | 'Other';
+
+export interface Reference {
+  id: string;
+  item_id: string;
+  kind: ReferenceKind;
+  filename: string;
+  storage_path: string;
+  mime_type: string;
+  created_at: string;
+}
+
 export interface Item {
   id: string;
   space_id: string;
@@ -27,11 +39,10 @@ export interface Item {
   model: string;
   serial_number: string;
   notes: string;
-  manual_path: string | null;
-  manual_filename: string | null;
   created_at: string;
   parts: Part[];
   photos: Photo[];
+  references: Reference[];
 }
 
 export interface Space {

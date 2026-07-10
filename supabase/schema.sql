@@ -1,7 +1,7 @@
 -- Home Base — Supabase schema
 -- Run this once in the Supabase project's SQL editor (Dashboard → SQL Editor → New query)
 -- for a FRESH project. If you already ran an earlier version of this file,
--- use supabase/migrations/0002_photos_and_fields.sql instead — it upgrades
+-- apply the files in supabase/migrations/ (in order) instead — they upgrade
 -- an existing database in place without losing data.
 -- Safe to re-run: guarded with IF NOT EXISTS / OR REPLACE where possible.
 
@@ -27,9 +27,21 @@ create table if not exists items (
   model             text default '',
   serial_number     text default '',
   notes             text default '',
-  manual_path       text,               -- storage path within the item-manuals bucket
-  manual_filename   text,
   created_at        timestamptz not null default now()
+);
+
+-- Reference files attached to an item — a manual, parts list, receipt,
+-- warranty… Any file type (PDF, images, video), stored in the item-manuals
+-- bucket (the bucket id is historical; it holds all reference files).
+create table if not exists item_references (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null references auth.users(id) on delete cascade default auth.uid(),
+  item_id       uuid not null references items(id) on delete cascade,
+  kind          text not null default 'Other',   -- Manual, Parts list, Receipt, Warranty, Other
+  filename      text not null,
+  storage_path  text not null,
+  mime_type     text not null default '',
+  created_at    timestamptz not null default now()
 );
 
 create table if not exists item_photos (
@@ -55,6 +67,7 @@ create table if not exists parts (
 
 create index if not exists items_space_id_idx on items(space_id);
 create index if not exists item_photos_item_id_idx on item_photos(item_id);
+create index if not exists item_references_item_id_idx on item_references(item_id);
 create index if not exists parts_item_id_idx on parts(item_id);
 
 -- Only one primary photo per item.
@@ -66,10 +79,11 @@ create unique index if not exists item_photos_one_primary_idx
 -- owns it. Since this is a single-user app, in practice that means "only you
 -- once you're signed in."
 -- ---------------------------------------------------------------------------
-alter table spaces       enable row level security;
-alter table items        enable row level security;
-alter table item_photos  enable row level security;
-alter table parts        enable row level security;
+alter table spaces           enable row level security;
+alter table items            enable row level security;
+alter table item_photos      enable row level security;
+alter table item_references  enable row level security;
+alter table parts            enable row level security;
 
 drop policy if exists "spaces_owner_all" on spaces;
 create policy "spaces_owner_all" on spaces
@@ -83,12 +97,16 @@ drop policy if exists "item_photos_owner_all" on item_photos;
 create policy "item_photos_owner_all" on item_photos
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists "item_references_owner_all" on item_references;
+create policy "item_references_owner_all" on item_references
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
 drop policy if exists "parts_owner_all" on parts;
 create policy "parts_owner_all" on parts
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- ---------------------------------------------------------------------------
--- Storage buckets for item photos and manual PDFs.
+-- Storage buckets for item photos and reference files.
 -- Buckets are "public" (readable by anyone with the exact URL) so <img> tags
 -- and manual links work without signed-URL refresh logic — object keys are
 -- random UUIDs and the bucket is not browsable, so this is "unlisted," not

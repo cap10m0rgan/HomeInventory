@@ -13,7 +13,9 @@ if (!url || !anonKey) {
 export const supabase = createClient(url, anonKey);
 
 export const PHOTOS_BUCKET = 'item-photos';
-export const MANUALS_BUCKET = 'item-manuals';
+// Holds every reference file (manuals, parts lists, receipts, videos…);
+// the bucket id predates the multi-reference feature.
+export const REFERENCES_BUCKET = 'item-manuals';
 
 export function publicUrlFor(bucket: string, path: string | null | undefined): string | null {
   if (!path) return null;
