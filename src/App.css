@@ -793,6 +793,25 @@ a.ref-name:hover {
   color: var(--ink-faint);
 }
 
+/* Chosen-file row at the top of the attach form: the file is already picked
+   before the form appears, so it reads as a confirmation, not an input. */
+.attach-file-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.attach-file-row .ref-icon {
+  background: var(--surface);
+}
+.attach-file-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  word-break: break-word;
+}
+
 /* ---- toasts --------------------------------------------------------------*/
 .toast-stack {
   position: fixed;

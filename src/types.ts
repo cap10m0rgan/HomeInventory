@@ -19,12 +19,11 @@ export interface Photo {
   created_at: string;
 }
 
-export type ReferenceKind = 'Manual' | 'Parts list' | 'Receipt' | 'Warranty' | 'Other';
-
 export interface Reference {
   id: string;
   item_id: string;
-  kind: ReferenceKind;
+  /** Free-text label ("Manual", "Parts list", "Wiring diagram"…), max 40 chars. */
+  kind: string;
   filename: string;
   storage_path: string;
   mime_type: string;

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Modal } from './Modal';
 import { ReferenceSection } from './ReferenceSection';
-import type { Item, Part, PartType, Photo, ReferenceKind, Space } from '../types';
+import type { Item, Part, PartType, Photo, Space } from '../types';
 import { PHOTOS_BUCKET, publicUrlFor } from '../lib/supabase';
 
 const PART_TYPES: PartType[] = ['Filter', 'Replacement part', 'Battery', 'Consumable', 'Accessory', 'Other'];
@@ -13,7 +13,8 @@ interface ItemDetailModalProps {
   onAddPhoto: (itemId: string, file: File, makePrimary: boolean) => void;
   onDeletePhoto: (itemId: string, photoId: string, storagePath: string, wasPrimary: boolean) => void;
   onSetPrimaryPhoto: (itemId: string, photoId: string) => void;
-  onAddReference: (itemId: string, file: File, kind: ReferenceKind) => void;
+  referenceKindSuggestions: string[];
+  onAddReference: (itemId: string, file: File, kind: string) => void;
   onDeleteReference: (referenceId: string, storagePath: string) => void;
   onAddPart: (itemId: string, part: { type: PartType; name: string; link: string; notes: string }) => void;
   onDeletePart: (partId: string) => void;
@@ -27,6 +28,7 @@ export function ItemDetailModal({
   onAddPhoto,
   onDeletePhoto,
   onSetPrimaryPhoto,
+  referenceKindSuggestions,
   onAddReference,
   onDeleteReference,
   onAddPart,
@@ -170,6 +172,7 @@ export function ItemDetailModal({
         make={d.make}
         model={d.model}
         references={d.references}
+        kindSuggestions={referenceKindSuggestions}
         onAddReference={onAddReference}
         onDeleteReference={onDeleteReference}
       />
