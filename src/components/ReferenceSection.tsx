@@ -136,6 +136,9 @@ export function ReferenceSection({
   function resetAttachForm() {
     setAttachFile(null);
     setAttachKind('');
+    // Don't let the unmounting form drop focus to <body> — that would break
+    // Escape-to-close on the modal until the user clicks back inside it.
+    requestAnimationFrame(() => addBtnRef.current?.focus());
   }
 
   function handleAttachSave() {

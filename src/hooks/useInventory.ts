@@ -130,12 +130,19 @@ export function useInventory(userId: string | undefined) {
 
   async function updateItem(
     itemId: string,
-    fields: { name: string; make: string; model: string; serialNumber: string; notes: string },
+    fields: { name: string; make: string; model: string; serialNumber: string; notes: string; spaceId: string },
   ) {
     await guarded(async () => {
       const { error } = await supabase
         .from('items')
-        .update({ name: fields.name, make: fields.make, model: fields.model, serial_number: fields.serialNumber, notes: fields.notes })
+        .update({
+          name: fields.name,
+          make: fields.make,
+          model: fields.model,
+          serial_number: fields.serialNumber,
+          notes: fields.notes,
+          space_id: fields.spaceId,
+        })
         .eq('id', itemId);
       if (error) throw error;
       await refresh();

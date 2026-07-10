@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Modal } from './Modal';
 import { ReferenceSection } from './ReferenceSection';
 import type { Item, Part, PartType, Photo, Space } from '../types';
@@ -9,7 +9,13 @@ const PART_TYPES: PartType[] = ['Filter', 'Replacement part', 'Battery', 'Consum
 interface ItemDetailModalProps {
   item: Item | null;
   space: Space | null;
+  /** All rooms, for moving the item while editing. */
+  spaces: { id: string; name: string }[];
   onClose: () => void;
+  onUpdateItem: (
+    itemId: string,
+    fields: { name: string; make: string; model: string; serialNumber: string; notes: string; spaceId: string },
+  ) => void;
   onAddPhoto: (itemId: string, file: File, makePrimary: boolean) => void;
   onDeletePhoto: (itemId: string, photoId: string, storagePath: string, wasPrimary: boolean) => void;
   onSetPrimaryPhoto: (itemId: string, photoId: string) => void;
@@ -24,7 +30,9 @@ interface ItemDetailModalProps {
 export function ItemDetailModal({
   item,
   space,
+  spaces,
   onClose,
+  onUpdateItem,
   onAddPhoto,
   onDeletePhoto,
   onSetPrimaryPhoto,
@@ -42,6 +50,19 @@ export function ItemDetailModal({
   const [partNotes, setPartNotes] = useState('');
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
 
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editMake, setEditMake] = useState('');
+  const [editModel, setEditModel] = useState('');
+  const [editSerial, setEditSerial] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editSpaceId, setEditSpaceId] = useState('');
+  const editId = useId();
+  const editNameRef = useRef<HTMLInputElement>(null);
+  const editBtnRef = useRef<HTMLButtonElement>(null);
+  const prevEditing = useRef(false);
+  const addPartBtnRef = useRef<HTMLButtonElement>(null);
+
   const addPhotoInput = useRef<HTMLInputElement>(null);
 
   // Retain the last non-null item/space so the modal's content doesn't blank
@@ -53,7 +74,22 @@ export function ItemDetailModal({
 
   useEffect(() => {
     setActivePhotoIdx(0);
+    setEditing(false);
   }, [display?.item.id]);
+
+  useEffect(() => {
+    if (!item) setEditing(false);
+  }, [item]);
+
+  // Keep focus inside the dialog across the edit-mode swap: entering focuses
+  // the first field; leaving focuses the Edit button. Without this, focus
+  // falls to <body> when the form unmounts and Escape stops closing the
+  // modal (the dialog's keydown handler never sees it).
+  useEffect(() => {
+    if (editing) editNameRef.current?.focus();
+    else if (prevEditing.current && item) editBtnRef.current?.focus();
+    prevEditing.current = editing;
+  }, [editing, item]);
 
   function resetPartForm() {
     setPartFormOpen(false);
@@ -61,6 +97,9 @@ export function ItemDetailModal({
     setPartName('');
     setPartLink('');
     setPartNotes('');
+    // Same focus rule as edit mode: don't let the unmounting form drop
+    // focus to <body>.
+    requestAnimationFrame(() => addPartBtnRef.current?.focus());
   }
 
   function handleSavePart() {
@@ -145,25 +184,107 @@ export function ItemDetailModal({
       </div>
 
       <div className="info-panel">
-        <h1>{d.name}</h1>
-        <div className="info-grid">
-          <div className="info-field">
-            <span className="k">Make</span>
-            <span className="v">{d.make || '—'}</span>
+        {!editing ? (
+          <>
+            <div className="info-head">
+              <h1>{d.name}</h1>
+              <button
+                ref={editBtnRef}
+                type="button"
+                className="section-add"
+                onClick={() => {
+                  setEditName(d.name);
+                  setEditMake(d.make);
+                  setEditModel(d.model);
+                  setEditSerial(d.serial_number);
+                  setEditNotes(d.notes);
+                  setEditSpaceId(s.id);
+                  setEditing(true);
+                }}
+              >
+                Edit
+              </button>
+            </div>
+            <div className="info-grid">
+              <div className="info-field">
+                <span className="k">Make</span>
+                <span className="v">{d.make || '—'}</span>
+              </div>
+              <div className="info-field">
+                <span className="k">Model</span>
+                <span className="v">{d.model || '—'}</span>
+              </div>
+              <div className="info-field">
+                <span className="k">Serial number</span>
+                <span className="v">{d.serial_number || '—'}</span>
+              </div>
+              <div className="info-field">
+                <span className="k">Room</span>
+                <span className="v">{s.name}</span>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="inline-form">
+            <div className="field">
+              <label htmlFor={`${editId}-name`}>Name</label>
+              <input id={`${editId}-name`} ref={editNameRef} value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="grid-2">
+              <div className="field">
+                <label htmlFor={`${editId}-make`}>Make</label>
+                <input id={`${editId}-make`} value={editMake} onChange={(e) => setEditMake(e.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor={`${editId}-model`}>Model</label>
+                <input id={`${editId}-model`} value={editModel} onChange={(e) => setEditModel(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid-2">
+              <div className="field">
+                <label htmlFor={`${editId}-serial`}>Serial number</label>
+                <input id={`${editId}-serial`} value={editSerial} onChange={(e) => setEditSerial(e.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor={`${editId}-room`}>Room</label>
+                <select id={`${editId}-room`} value={editSpaceId} onChange={(e) => setEditSpaceId(e.target.value)}>
+                  {spaces.map((sp) => (
+                    <option key={sp.id} value={sp.id}>
+                      {sp.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor={`${editId}-notes`}>Notes</label>
+              <textarea id={`${editId}-notes`} value={editNotes} onChange={(e) => setEditNotes(e.target.value)} />
+            </div>
+            <div className="form-actions">
+              <button type="button" className="btn ghost small" onClick={() => setEditing(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn primary small"
+                disabled={!editName.trim()}
+                onClick={() => {
+                  onUpdateItem(d.id, {
+                    name: editName.trim(),
+                    make: editMake.trim(),
+                    model: editModel.trim(),
+                    serialNumber: editSerial.trim(),
+                    notes: editNotes.trim(),
+                    spaceId: editSpaceId,
+                  });
+                  setEditing(false);
+                }}
+              >
+                Save changes
+              </button>
+            </div>
           </div>
-          <div className="info-field">
-            <span className="k">Model</span>
-            <span className="v">{d.model || '—'}</span>
-          </div>
-          <div className="info-field">
-            <span className="k">Serial number</span>
-            <span className="v">{d.serial_number || '—'}</span>
-          </div>
-          <div className="info-field">
-            <span className="k">Room</span>
-            <span className="v">{s.name}</span>
-          </div>
-        </div>
+        )}
       </div>
 
       <ReferenceSection
@@ -177,7 +298,7 @@ export function ItemDetailModal({
         onDeleteReference={onDeleteReference}
       />
 
-      {d.notes && (
+      {d.notes && !editing && (
         <div className="detail-section">
           <h3>Notes</h3>
           <p className="notes-text" style={{ margin: 0 }}>
@@ -236,7 +357,7 @@ export function ItemDetailModal({
         </table>
 
         {!partFormOpen ? (
-          <button type="button" className="inline-add-toggle" onClick={() => setPartFormOpen(true)}>
+          <button ref={addPartBtnRef} type="button" className="inline-add-toggle" onClick={() => setPartFormOpen(true)}>
             + Add part
           </button>
         ) : (

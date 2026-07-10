@@ -218,7 +218,13 @@ export function Shell({ userId, onSignOut }: { userId: string; onSignOut: () => 
       <ItemDetailModal
         item={activeItem}
         space={activeItemSpace}
+        spaces={inventory.spaces}
         onClose={closeItem}
+        onUpdateItem={(itemId, fields) => {
+          inventory.updateItem(itemId, fields);
+          // If the item moved rooms, keep the open modal pointed at its new home.
+          setActiveItemSpaceId(fields.spaceId);
+        }}
         onAddPhoto={inventory.addPhoto}
         onDeletePhoto={inventory.deletePhoto}
         onSetPrimaryPhoto={inventory.setPrimaryPhoto}

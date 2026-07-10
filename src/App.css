@@ -548,6 +548,18 @@ button.ref-menu-option {
   font-size: 22px;
   margin: 0 0 14px;
 }
+.info-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.info-head h1 {
+  margin: 0 0 14px;
+}
+.info-head .section-add {
+  margin-bottom: 14px;
+}
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
