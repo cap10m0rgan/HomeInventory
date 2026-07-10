@@ -57,6 +57,8 @@ haven't applied yet, in order, in the SQL editor. Each is safe to re-run:
   files: manual, parts list, receipt, warranty…), preserving any
   already-attached manual as a `Manual` reference, and drops the old
   single-manual columns from `items`.
+- `0004_kind_free_text.sql` — adds a length check constraint on
+  `item_references.kind` now that reference labels are free text.
 
 ## Local development
 

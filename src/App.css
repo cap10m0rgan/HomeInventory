@@ -548,6 +548,18 @@ button.ref-menu-option {
   font-size: 22px;
   margin: 0 0 14px;
 }
+.info-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.info-head h1 {
+  margin: 0 0 14px;
+}
+.info-head .section-add {
+  margin-bottom: 14px;
+}
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -791,6 +803,25 @@ a.ref-name:hover {
   font-size: 11.5px;
   letter-spacing: 0.02em;
   color: var(--ink-faint);
+}
+
+/* Chosen-file row at the top of the attach form: the file is already picked
+   before the form appears, so it reads as a confirmation, not an input. */
+.attach-file-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.attach-file-row .ref-icon {
+  background: var(--surface);
+}
+.attach-file-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  word-break: break-word;
 }
 
 /* ---- toasts --------------------------------------------------------------*/

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { PHOTOS_BUCKET, REFERENCES_BUCKET, supabase } from '../lib/supabase';
 import { compressImage } from '../lib/image';
 import { useToasts } from './useToasts';
-import type { Part, PartType, Photo, Reference, ReferenceKind, Space } from '../types';
+import type { Part, PartType, Photo, Reference, Space } from '../types';
 
 export function useInventory(userId: string | undefined) {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -130,12 +130,19 @@ export function useInventory(userId: string | undefined) {
 
   async function updateItem(
     itemId: string,
-    fields: { name: string; make: string; model: string; serialNumber: string; notes: string },
+    fields: { name: string; make: string; model: string; serialNumber: string; notes: string; spaceId: string },
   ) {
     await guarded(async () => {
       const { error } = await supabase
         .from('items')
-        .update({ name: fields.name, make: fields.make, model: fields.model, serial_number: fields.serialNumber, notes: fields.notes })
+        .update({
+          name: fields.name,
+          make: fields.make,
+          model: fields.model,
+          serial_number: fields.serialNumber,
+          notes: fields.notes,
+          space_id: fields.spaceId,
+        })
         .eq('id', itemId);
       if (error) throw error;
       await refresh();
@@ -206,9 +213,12 @@ export function useInventory(userId: string | undefined) {
     }, "Couldn't set cover photo");
   }
 
-  async function addReference(itemId: string, file: File, kind: ReferenceKind) {
+  async function addReference(itemId: string, file: File, kind: string) {
     if (!userId) return;
     await guarded(async () => {
+      // Kind is free text now — normalize at the DB boundary so every caller
+      // gets the same hygiene (a check constraint enforces the cap server-side).
+      const cleanKind = kind.replace(/\s+/g, ' ').trim().slice(0, 40) || 'Other';
       const path = `${userId}/${itemId}/${crypto.randomUUID()}-${file.name}`;
       const { error: uploadErr } = await supabase.storage
         .from(REFERENCES_BUCKET)
@@ -216,7 +226,7 @@ export function useInventory(userId: string | undefined) {
       if (uploadErr) throw uploadErr;
       const { error: insertErr } = await supabase
         .from('item_references')
-        .insert({ item_id: itemId, user_id: userId, kind, filename: file.name, storage_path: path, mime_type: file.type || '' });
+        .insert({ item_id: itemId, user_id: userId, kind: cleanKind, filename: file.name, storage_path: path, mime_type: file.type || '' });
       if (insertErr) throw insertErr;
       await refresh();
     }, "Couldn't attach file");

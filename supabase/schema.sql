@@ -37,7 +37,8 @@ create table if not exists item_references (
   id            uuid primary key default gen_random_uuid(),
   user_id       uuid not null references auth.users(id) on delete cascade default auth.uid(),
   item_id       uuid not null references items(id) on delete cascade,
-  kind          text not null default 'Other',   -- Manual, Parts list, Receipt, Warranty, Other
+  kind          text not null default 'Other'    -- free-text label, e.g. Manual, Parts list, Receipt
+                  check (char_length(kind) between 1 and 40),
   filename      text not null,
   storage_path  text not null,
   mime_type     text not null default '',

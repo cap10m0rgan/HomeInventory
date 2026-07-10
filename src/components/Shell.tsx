@@ -47,6 +47,22 @@ export function Shell({ userId, onSignOut }: { userId: string; onSignOut: () => 
   const activeItem = activeItemId
     ? inventory.spaces.flatMap((s) => s.items).find((it) => it.id === activeItemId) ?? null
     : null;
+
+  // Label suggestions for attaching references: a few starters merged with
+  // every label already in use anywhere in the inventory. The vocabulary
+  // maintains itself — no settings screen needed.
+  const referenceKindSuggestions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const k of ['Manual', 'Parts list', 'Receipt', 'Warranty']) seen.set(k.toLowerCase(), k);
+    inventory.spaces.forEach((sp) =>
+      sp.items.forEach((it) =>
+        it.references.forEach((r) => {
+          if (r.kind && !seen.has(r.kind.toLowerCase())) seen.set(r.kind.toLowerCase(), r.kind);
+        }),
+      ),
+    );
+    return [...seen.values()].sort((a, b) => a.localeCompare(b));
+  }, [inventory.spaces]);
   const activeItemSpace = activeItemSpaceId ? inventory.spaces.find((s) => s.id === activeItemSpaceId) ?? null : null;
 
   function openItem(itemId: string, spaceId: string) {
@@ -202,10 +218,17 @@ export function Shell({ userId, onSignOut }: { userId: string; onSignOut: () => 
       <ItemDetailModal
         item={activeItem}
         space={activeItemSpace}
+        spaces={inventory.spaces}
         onClose={closeItem}
+        onUpdateItem={(itemId, fields) => {
+          inventory.updateItem(itemId, fields);
+          // If the item moved rooms, keep the open modal pointed at its new home.
+          setActiveItemSpaceId(fields.spaceId);
+        }}
         onAddPhoto={inventory.addPhoto}
         onDeletePhoto={inventory.deletePhoto}
         onSetPrimaryPhoto={inventory.setPrimaryPhoto}
+        referenceKindSuggestions={referenceKindSuggestions}
         onAddReference={inventory.addReference}
         onDeleteReference={inventory.deleteReference}
         onAddPart={inventory.addPart}
